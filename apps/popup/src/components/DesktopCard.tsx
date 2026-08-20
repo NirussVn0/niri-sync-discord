@@ -4,7 +4,7 @@ import { Monitor, Code, Terminal, Globe, Gamepad2, Video, EyeOff } from "lucide-
 interface DesktopCardProps {
   desktop: DesktopFact | null | undefined;
   presence: ResolvedPresence | null | undefined;
-  privacyMode?: boolean;
+  privacyMode?: boolean | undefined;
 }
 
 export const DesktopCard = ({
