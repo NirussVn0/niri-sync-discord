@@ -1,146 +1,265 @@
-# presenced (Niri Sync Discord)
+# Niri Sync Discord (`presenced`)
 
-A local-first Linux presence daemon + web control center written in TypeScript.
+<div align="center">
 
-`presenced` observes local desktop and media context from **Niri + MPRIS**, resolves it into one stable activity through a deterministic presence engine, enriches music with synchronized lyrics from **LRCLIB**, exposes transparent state and rules via a dark-first local web dashboard, and publishes safe, rate-controlled activity to **Discord Rich Presence**.
+![Linux](https://img.shields.io/badge/Platform-Linux%20%28Wayland%2FNiri%29-1793d1?style=for-the-badge&logo=linux&logoColor=white)
+![Tauri v2](https://img.shields.io/badge/Companion-Tauri%20v2-24c8db?style=for-the-badge&logo=tauri&logoColor=white)
+![React 19](https://img.shields.io/badge/Frontend-React%2019-61dafb?style=for-the-badge&logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/Codebase-TypeScript-3178c6?style=for-the-badge&logo=typescript&logoColor=white)
+![Tests](https://img.shields.io/badge/Tests-110%20Passing-10b981?style=for-the-badge)
+![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)
+
+**A local-first Linux desktop companion and presence engine engineered specifically for Niri Wayland workflows.**
+
+[Key Features](#-key-features) • [Architecture](#-system-architecture) • [Step-by-Step Build Tutorial](#-step-by-step-build-tutorial) • [Niri Integration](#-niri-wayland-integration) • [Testing](#-testing--quality-gates)
+
+</div>
 
 ---
 
-## Key Features
+## 🌟 Overview
 
-- **Event-Driven Architecture**: Consumes Niri's event stream (`niri msg --json event-stream`) and MPRIS playback events via `playerctl` without CPU-heavy polling loops.
-- **Deterministic Resolution**: Evaluates candidate activities based on user-configurable priority weights (`Manual (100) > Privacy (95) > Gaming (90) > Music (80) > Recording (75) > Coding (60) > Video (50) > Browser (30) > Terminal (25) > Generic (10) > Idle (0)`).
-- **Synchronized Lyrics Engine**: Integrates with LRCLIB, parses LRC timestamp formats (`[mm:ss.xx]`, `[mm:ss.xxx]`, multi-tag lines), maintains monotonic playback clock anchoring, and provides $O(\log n)$ binary-search active lyric line matching.
-- **Discord Local RPC**: Direct IPC socket connection (`$XDG_RUNTIME_DIR/discord-ipc-*`) using `SET_ACTIVITY` with duplicate suppression, rate coalescing, and auto-reconnect backoff.
-- **Web Control Center**: Vite + React "Now" screen featuring live presence cards with "Why this won" resolver reasoning, Discord RPC output preview, monotonic playback progress bar, scrolling synchronized lyrics view, and per-app rules editor.
-- **Privacy by Default**: Automatic secret/token redaction, length capping (128 chars), sensitive password manager masking, and instant Privacy Mode toggle.
-- **Local Persistence**: Built-in SQLite persistence (`~/.config/presenced/presenced.db`) for priority weights, per-app mappings, manual overrides, and privacy state.
+`presenced` transforms your Linux desktop experience by fusing **Niri Wayland context**, **MPRIS media state**, **synchronized lyrics**, **Pomodoro focus cycles**, **personal milestone countdowns**, and **hardware telemetry** into a single, cohesive companion.
+
+It delivers:
+1. **The Daemon (`apps/daemon`)**: A headless background engine that processes real-time event streams, resolves conflicting desktop activities using deterministic priority weighting, matches synced lyrics, and publishes rate-controlled Discord Rich Presence.
+2. **The Companion Popup (`apps/popup`)**: A vertical floating desktop companion (Tauri v2, React 19, WebKit2GTK) featuring 3-line focused lyrics, interactive media playback buttons, Pomodoro timers, and slide-over settings.
+3. **The Web Dashboard (`apps/web`)**: A diagnostic control center for configuring rules, overrides, and integrations.
 
 ---
 
-## Quick Start
+## ✨ Key Features
 
-### Prerequisites
-- Linux OS with Niri compositor (`niri`)
-- Node.js LTS (v20+ or v22+)
-- `playerctl` for MPRIS media observation
-- `pnpm` (v9+)
+- **🪟 Niri-Native Context**: Connects directly to `niri msg --json event-stream`. Tracks active workspaces, focused outputs (`DP-4` vs `HDMI-A-3`), and preserves desktop focus context when the companion popup gains focus.
+- **🎵 Synchronized Lyrics Engine**: Integrates with [LRCLIB](https://lrclib.net) with local SQLite caching. Parses all LRC timestamp variants and uses $O(\log n)$ binary search with monotonic playback clock anchoring to render smooth, jitter-free lyrics.
+- **⏯️ Interactive Media Controls**: Control any MPRIS-compatible player (Spotify, Feishin, Firefox, Chromium) with Play/Pause, Next, and Previous buttons directly in the popup.
+- **⏱️ Authoritative Pomodoro Engine**: Integrated 25-minute focus intervals and short/long break counters with live Discord RPC broadcasting.
+- **🎯 Milestone Countdowns**: Track days and hours remaining until exams, project launches, or holidays with automatic urgency highlights.
+- **📊 Linux Hardware Telemetry**: Pure Node.js `/proc` and `/sys` reader tracking CPU load, RAM usage, system uptime, and battery state without spawning heavy subprocesses.
+- **🎨 Custom RPC Template Engine**: Safe, expression-free token substitution (`{track}`, `{artist}`, `{lyric}`, `{pomodoro.remaining}`, `{countdown.days}`, `{system.cpu}`) to customize your Discord presence.
+- **🔒 Privacy by Default**: Automatic token redaction, sensitive app filtering (password managers, private browsers), and instant global privacy masking.
 
-### Installation & Build
+---
+
+## 🏗️ System Architecture
+
+```
+  ┌─────────────────────────────────────────────────────────────┐
+  │                   presenced Daemon (Brain)                  │
+  │  • Sources: Niri IPC · MPRIS · LRCLIB · Linux /proc         │
+  │  • Engines: Scene Resolver · Pomodoro · Milestone Countdown │
+  │  • Auth: $XDG_RUNTIME_DIR/presenced.token (0600 mode)       │
+  └───────────────┬─────────────────────────────┬───────────────┘
+                  │ WebSocket/HTTP (4242)       │ Local IPC Socket
+                  ▼                             ▼
+  ┌───────────────────────────────┐   ┌─────────────────────────┐
+  │  Desktop Companion (Popup)    │   │  Discord Rich Presence  │
+  │  • Tauri v2 · React 19 · CSS  │   │  • Safe RPC Templates   │
+  │  • 3-Line Focused Lyrics      │   │  • Rate-limited framing │
+  │  • Interactive Pomo Controls  │   │  • Privacy Masking      │
+  │  • Slide-Over Settings Drawer │   └─────────────────────────┘
+  └───────────────────────────────┘
+```
+
+---
+
+## 📖 Step-by-Step Build Tutorial
+
+### 1. Install System Dependencies
+
+#### Arch Linux / CachyOS / Manjaro
+```bash
+sudo pacman -S --needed \
+  nodejs \
+  npm \
+  pnpm \
+  rust \
+  cargo \
+  base-devel \
+  webkit2gtk-4.1 \
+  gtk-layer-shell \
+  libappindicator-gtk3 \
+  playerctl
+```
+
+#### Fedora (40+)
+```bash
+sudo dnf install \
+  nodejs \
+  npm \
+  pnpm \
+  rust \
+  cargo \
+  gcc-c++ \
+  webkit2gtk4.1-devel \
+  gtk-layer-shell-devel \
+  libappindicator-gtk3-devel \
+  playerctl
+```
+
+#### Ubuntu / Debian (24.04+)
+```bash
+sudo apt update && sudo apt install -y \
+  nodejs \
+  npm \
+  cargo \
+  rustc \
+  build-essential \
+  libwebkit2gtk-4.1-dev \
+  libgtk-layer-shell-dev \
+  libayatana-appindicator3-dev \
+  playerctl
+
+# Install pnpm globally
+sudo npm install -g pnpm
+```
+
+---
+
+### 2. Clone and Bootstrap the Monorepo
 
 ```bash
-# Clone repository
+# Clone the repository
 git clone https://github.com/NirussVn0/niri-sync-discord.git
 cd niri-sync-discord
 
-# Install dependencies and build all packages
+# Install all workspace dependencies
 pnpm install
+
+# Build all packages and applications (contracts, core, daemon, popup, web)
 pnpm build
 ```
 
-### Running the Daemon
+---
+
+### 3. Run in Development Mode
+
+Run the background daemon in one terminal:
+```bash
+pnpm daemon:dev
+```
+
+Launch the companion popup in a second terminal:
+```bash
+pnpm popup:dev
+```
+
+---
+
+### 4. Build Production Binaries
 
 ```bash
-# Start presenced daemon (listens on http://127.0.0.1:4242)
-pnpm --filter @presenced/daemon start
+# Build production daemon & web assets
+pnpm --filter @presenced/daemon build
+pnpm --filter @presenced/web build
 
-# Or run the CLI diagnostic tool
-node apps/daemon/dist/cli.js --diagnostics
+# Build production Tauri desktop popup
+pnpm --filter @presenced/popup build
+cd apps/popup/src-tauri
+cargo build --release
 ```
+The compiled companion binary will be available at `apps/popup/src-tauri/target/release/presenced-popup`.
 
-### Running the Web Dashboard (Development)
+---
+
+## ⚙️ systemd Service Installation
+
+To run `presenced` automatically with your desktop graphical session:
 
 ```bash
-pnpm --filter @presenced/web dev
-```
+# Create user systemd directory
+mkdir -p ~/.config/systemd/user
 
-Open `http://localhost:5173` (or `http://127.0.0.1:4242` when running the bundled production daemon).
+# Copy service unit
+cp systemd/presenced.service ~/.config/systemd/user/
 
----
+# Reload systemd and start daemon
+systemctl --user daemon-reload
+systemctl --user enable --now presenced.service
 
-## CLI Options & Environment Variables
-
-### Command Line Options
-
-```text
-presenced [OPTIONS]
-
-OPTIONS:
-  -h, --help                  Print help information
-  -v, --version               Print version information
-  -d, --diagnostics           Run system diagnostic checks and print report
-  -p, --port <PORT>           HTTP/WS API port (default: 4242 or $PORT)
-      --host <HOST>           HTTP/WS host to bind (default: 127.0.0.1 or $HOST)
-      --db-path <PATH>        Custom path to SQLite database
-      --discord-client-id <ID> Custom Discord Application Client ID
-```
-
-### Environment Variables
-
-| Variable | Description | Default |
-| :--- | :--- | :--- |
-| `PORT` | Local HTTP/WebSocket server port | `4242` |
-| `HOST` | Loopback address to bind | `127.0.0.1` |
-| `DB_PATH` | SQLite database file path | `~/.config/presenced/presenced.db` |
-| `DISCORD_CLIENT_ID` | Discord Application Client ID | `1214041725514194954` |
-
----
-
-## Systemd User Service Setup
-
-To run `presenced` automatically with your desktop session:
-
-1. Copy the systemd service file:
-   ```bash
-   mkdir -p ~/.config/systemd/user
-   cp systemd/presenced.service ~/.config/systemd/user/
-   ```
-
-2. Reload systemd user daemon and enable the service:
-   ```bash
-   systemctl --user daemon-reload
-   systemctl --user enable --now presenced.service
-   ```
-
-3. Check logs and status:
-   ```bash
-   systemctl --user status presenced.service
-   journalctl --user -u presenced.service -f
-   ```
-
----
-
-## Monorepo Architecture
-
-```text
-presenced/
-├── apps/
-│   ├── daemon/          # Backend engine, sources (Niri, MPRIS), Discord RPC, LRCLIB, SQLite, Hono API
-│   └── web/             # React + Tailwind + Vite Web Control Center
-├── packages/
-│   ├── contracts/       # Shared TypeScript types and Zod schemas (facts, presence, lyrics, rules)
-│   └── core/            # Deterministic presence resolver, categories, sanitizer, and LRC parser
-├── systemd/             # Systemd user service unit configuration
-└── docs/                # Architectural, privacy, and UX specifications
+# Check service status & live logs
+systemctl --user status presenced.service
+journalctl --user -u presenced.service -f
 ```
 
 ---
 
-## Verification & Testing
+## 🖥️ Niri Wayland Integration
+
+Add the following configuration to `~/.config/niri/config.kdl` to bind a hotkey and position the companion as a native floating window:
+
+```kdl
+// Keybinding to launch or toggle the companion popup
+binds {
+    Mod+P { spawn "presenced-popup"; }
+}
+
+// Window rules for the companion popup
+window-rule {
+    match app-id="^io\\.niruss\\.niri-sync-discord$"
+    match app-id="^niri-sync-discord$"
+    match title="^presenced$"
+    open-floating true
+    default-floating-position top-right
+    shadow {
+        on
+        softness 30
+        spread 5
+        offset x=0 y=4
+    }
+}
+```
+
+---
+
+## 🎭 Scene Profiles & Priority Matrix
+
+| Scene | Trigger / Mode | Discord Details | Discord State |
+| :--- | :--- | :--- | :--- |
+| **Auto** | Default resolver | Context-dependent | Context-dependent |
+| **Music** | MPRIS playing | `{track} - {artist}` | `{lyric}` (Synced lyrics) |
+| **Focus** | Deep work mode | `{app}` | `{title}` |
+| **Pomodoro** | Active timer | `Focus: {pomodoro.task}` | `{pomodoro.remaining} left` |
+| **Countdown**| Milestone target | `{countdown.title}` | `{countdown.days}d {countdown.hours}h left` |
+| **System** | Telemetry mode | `{hostname} (CPU: {system.cpu}%)`| `RAM: {system.ram}%` |
+| **Privacy** | Hidden titles | `Using Linux Desktop` | `Focusing` |
+
+---
+
+## 🧪 Testing & Quality Gates
+
+The project maintains strict TypeScript typings and unit/integration test coverage:
 
 ```bash
-# Run unit & integration test suite (Vitest)
+# Run all Vitest suites (110 tests across 36 files)
 pnpm test
 
-# Run strict TypeScript typecheck across monorepo
-pnpm -r typecheck
+# Run strict TypeScript typechecking
+pnpm typecheck
 
-# Full production build
-pnpm -r build
+# Run linter and code style check
+pnpm lint
 ```
 
 ---
 
-## License
+## 📁 Monorepo Workspace Structure
+
+```text
+niri-sync-discord/
+├── apps/
+│   ├── daemon/          # Headless backend (Niri, MPRIS, LRCLIB, SQLite, Discord RPC, Hono)
+│   ├── popup/           # Desktop companion (Tauri v2, React 19, Tailwind CSS)
+│   └── web/             # Web dashboard & diagnostics
+├── packages/
+│   ├── contracts/       # Zod schemas & TypeScript definitions
+│   └── core/            # Scene resolver, template engine, sanitizer & LRC parser
+├── systemd/             # Systemd user service unit & XDG desktop entry
+└── docs/                # Architecture, UX, privacy, and research specifications
+```
+
+---
+
+## 📄 License
 
 MIT © [NirussVn0](https://github.com/NirussVn0)
