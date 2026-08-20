@@ -15,14 +15,12 @@ DAEMON_INSTALL_DIR="$HOME/.local/share/presenced/daemon"
 # 1. Create target directories
 mkdir -p "$BIN_DIR" "$APP_DIR" "$ICON_DIR" "$SYSTEMD_DIR" "$DAEMON_INSTALL_DIR"
 
-# 2. Build binaries if not already built
-if [[ ! -f "$REPO_DIR/apps/popup/src-tauri/target/release/presenced-popup" ]]; then
-  echo "Building popup binary..."
-  cargo build --release --manifest-path "$REPO_DIR/apps/popup/src-tauri/Cargo.toml"
-fi
-
-echo "Building daemon and packages..."
+# 2. Build daemon, packages and embedded Tauri popup binary
+echo "Building daemon and core packages..."
 (cd "$REPO_DIR" && pnpm build)
+
+echo "Building standalone desktop popup binary..."
+(cd "$REPO_DIR" && pnpm --filter @presenced/popup tauri build)
 
 # 3. Copy binaries to ~/.local/bin/
 echo "Installing presenced-popup to $BIN_DIR/presenced-popup..."
