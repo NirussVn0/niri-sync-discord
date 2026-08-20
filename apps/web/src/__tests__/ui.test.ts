@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { ResolvedPresence } from "@presenced/contracts";
+import { ResolvedPresence, MediaFact } from "@presenced/contracts";
 
 describe("Web UI components & contracts", () => {
   it("formats presence correctly for Discord and Presence cards", () => {
@@ -32,5 +32,25 @@ describe("Web UI components & contracts", () => {
 
     expect(privacyPresence.category).toBe("privacy");
     expect(privacyPresence.title).toBe("Privacy Mode");
+  });
+
+  it("handles MediaFact with playback duration and artwork", () => {
+    const mediaFact: MediaFact = {
+      kind: "media",
+      player: "spotify",
+      playback: "playing",
+      title: "Blinding Lights",
+      artist: "The Weeknd",
+      album: "After Hours",
+      artUrl: "https://example.com/art.jpg",
+      durationMs: 200000,
+      positionAnchorMs: 50000,
+      observedAt: Date.now(),
+    };
+
+    expect(mediaFact.player).toBe("spotify");
+    expect(mediaFact.playback).toBe("playing");
+    expect(mediaFact.title).toBe("Blinding Lights");
+    expect(mediaFact.durationMs).toBe(200000);
   });
 });
