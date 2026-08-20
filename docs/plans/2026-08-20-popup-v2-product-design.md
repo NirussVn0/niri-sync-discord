@@ -1,6 +1,6 @@
 # Niri Sync Discord — Popup-First V2 Product Design & Architectural Specification
 
-**Document Version:** 2.0.0  
+**Document Version:** 2.1.0  
 **Date:** 2026-08-20  
 **Author:** Lead Software Engineer & Product Designer  
 **Target Repository:** `NirussVn0/niri-sync-discord`  
@@ -16,11 +16,6 @@ The V1 system was built as a daemon-centric monorepo with an accompanying web br
 - **`apps/daemon`**: Node.js LTS daemon running `NiriSource` (JSON stream via `niri msg --json event-stream`), `MprisSource` (`playerctl metadata --follow` with monotonic `PlaybackClock` position tracking), `DiscordRpcClient` (Unix domain IPC socket with 8-byte LE framing), `LrclibClient` (synced/plain lyrics lookup with search fallback and SQLite caching), `PresenceStore` (focus debounce and state broadcasting), `DatabaseManager` (native `node:sqlite` WAL persistence), and `ApiServer` (Hono HTTP + WebSocket stream on `127.0.0.1:4242`).
 - **`apps/web`**: React + Vite + Tailwind CSS control center served either via Vite dev server or statically hosted by `ApiServer`.
 
-### Key Bottlenecks of V1 Architecture
-1. **Interaction Mismatch**: Opening a full web browser tab to check presence, tune Pomodoro, or see current lyrics disrupts Wayland window tiling workflows.
-2. **Hardcoded Presence Strings**: Discord activity formatting was coupled to rigid category defaults without dynamic user-defined templates or countdown variables.
-3. **Missing Desktop Companion Features**: Productive desktop sessions require focus timers (Pomodoro), personal event/exam countdowns, hardware health monitoring, and instant scene overrides.
-
 ---
 
 ## 2. KEEP / CHANGE / DROP Analysis
@@ -29,8 +24,8 @@ The V1 system was built as a daemon-centric monorepo with an accompanying web br
 | :--- | :--- | :--- |
 | `packages/contracts` | **KEEP & EXTEND** | Existing Zod schemas for facts, lyrics, and presence are battle-tested. Extend with `Scene`, `Template`, `PomodoroFact`, `CountdownFact`, and `SystemFact`. |
 | `packages/core` (Resolver, Sanitizer, LRC Parser) | **KEEP & EXTEND** | Core deterministic decision logic, $O(\log n)$ lyric search, and secret redactor are completely decoupled from UI. Add `SceneResolver`, `TemplateEngine`, `PomodoroClock`, and `CountdownCalculator`. |
-| `apps/daemon` (Sources, Discord RPC, SQLite, API) | **KEEP & EXPAND** | Background daemon remains the authoritative "brain" running as a systemd user service. Add `PomodoroEngine`, `CountdownEngine`, `SystemSource`, and `SceneManager`. |
-| Daemon Connection Model | **CHANGE** | Retain HTTP (`127.0.0.1:4242`) + WebSocket (`/api/events`) with enhanced local token handshake and auto-reconnect backoff, ensuring the daemon runs independently of popup window lifecycle. |
+| `apps/daemon` (Sources, Discord RPC, SQLite, API) | **KEEP & EXPAND** | Background daemon remains the authoritative "brain" running as a systemd user service. Add `PomodoroEngine`, `CountdownEngine`, `SystemSource`, `NiriShellAdapter`, and `SceneManager`. |
+| Daemon Connection Model | **CHANGE** | Retain HTTP (`127.0.0.1:4242`) + WebSocket (`/api/events`) with local token handshake and auto-reconnect backoff, ensuring the daemon runs independently of popup window lifecycle. |
 | Primary User Interface | **CHANGE** | Pivot from a full-page web dashboard to a dedicated, compact, borderless desktop popup app in `apps/popup/` powered by **Tauri v2 + React + TypeScript**. |
 | `apps/web` (Web Dashboard) | **DROP / RETIRE** | Deprecate `apps/web` as the primary user surface. Reusable component logic (lyrics sync math, media progress bars, Discord simulated card) is migrated into `apps/popup/src/components/`. |
 
@@ -92,286 +87,164 @@ The V1 system was built as a daemon-centric monorepo with an accompanying web br
   └──────────────────────────────────────────┘
   ```
 
-### 5.2 Window Behavior & Wayland Interaction
-- **Summoning**: Bound to keyboard shortcut via Niri configuration (`binds { "Mod+D" { spawn "presenced-popup"; } }`) or Tauri system-level global hotkey plugin.
-- **Dismissal**: `Escape` key, clicking outside (when `closeOnBlur: true` is enabled in settings), or pressing the hotkey toggle again.
-- **State Preservation**: The popup UI state (active view drawer, scroll position) caches locally so reopening is instantaneous (<50ms).
-
 ---
 
 ## 6. Scene System
 
 A **Scene** determines the active context displayed in the popup and published to Discord Rich Presence.
-
-### 6.1 Supported Built-in Scenes
-1. **`auto`**: Default mode. Evaluates all incoming facts through the deterministic priority resolver (`manual > privacy > gaming > music > recording > coding > video > browser > terminal > generic > idle`).
-2. **`music`**: Forces MPRIS media and synchronized lyrics to the forefront, even if high-priority desktop windows are open.
-3. **`focus`**: Focus mode suppressing desktop details, showing current task title and elapsed time.
-4. **`pomodoro`**: Active Pomodoro focus/break cycle timer with session counter and progress bar.
-5. **`countdown`**: Highlights active user milestone countdown (e.g. exams, hackathons, holidays).
-6. **`system`**: Hardware telemetry presence scene displaying CPU, RAM, and thermals.
-7. **`privacy`**: Masks all desktop and media presence; Discord RPC publishes generic "Private Mode".
-8. **`custom`**: User-defined custom text, static asset, and manual details.
-
-### 6.2 Scene Data Contract (`packages/contracts/src/scenes.ts`)
-```ts
-export type SceneType =
-  | "auto"
-  | "music"
-  | "focus"
-  | "pomodoro"
-  | "countdown"
-  | "system"
-  | "privacy"
-  | "custom";
-
-export interface SceneDefinition {
-  id: string;
-  type: SceneType;
-  name: string;
-  templateId: string;
-  customDetails?: string;
-  customState?: string;
-  targetCountdownId?: string;
-  priorityOverride?: number;
-}
-```
+- **`auto`**: Evaluates facts through priority resolver (`manual > privacy > gaming > music > recording > coding > video > browser > terminal > generic > idle`).
+- **`music`**: Forces MPRIS media and synchronized lyrics to the forefront.
+- **`focus`**: Focus mode suppressing desktop details, showing current task and elapsed time.
+- **`pomodoro`**: Active Pomodoro focus/break cycle timer.
+- **`countdown`**: Highlights active user milestone countdown (e.g. exams, hackathons, holidays).
+- **`system`**: Hardware telemetry presence scene displaying CPU, RAM, and thermals.
+- **`privacy`**: Masks all desktop and media presence; Discord RPC publishes generic "Private Mode".
+- **`custom`**: User-defined custom text, static asset, and manual details.
 
 ---
 
 ## 7. Sources
 
-The daemon orchestrates 6 normalized factual data sources:
-1. **`NiriSource`**: Window focus, workspace transitions, app IDs (`niri msg --json event-stream`).
+1. **`NiriSource` / `NiriShellAdapter`**: Window focus, workspace transitions, active outputs (`niri msg --json event-stream`).
 2. **`MprisSource`**: Track title, artist, album, art URL, playback status, monotonic position anchor (`playerctl metadata --follow`).
 3. **`LrclibSource`**: Synchronized lyrics, plain lyrics, instrumental status, match confidence (`https://lrclib.net/api/get` + `/search`).
 4. **`PomodoroEngine`**: Monotonic interval timer managing Focus (25m), Short Break (5m), Long Break (15m), and session count.
 5. **`CountdownEngine`**: Active user countdown target calculations (days, hours, minutes remaining).
-6. **`SystemSource`**: CPU usage percentage (from `/proc/stat`), RAM usage (from `/proc/meminfo`), battery level (from `/sys/class/power_supply/`), and CPU temp (from `/sys/class/thermal/`).
+6. **`SystemSource`**: CPU usage percentage, RAM usage, battery level, and CPU temp.
 
 ---
 
 ## 8. Outputs
 
-1. **Discord Rich Presence (`outputs/discord`)**:
-   - Dispatches `SET_ACTIVITY` frames via Linux IPC socket (`$XDG_RUNTIME_DIR/discord-ipc-0`, Flatpak, Snap).
-   - Rendered using the active Scene's template.
-   - Throttled at 3-second coalescing intervals (1 second for high-signal transitions).
-2. **Popup UI WebSocket Stream (`api/server.ts`)**:
-   - Real-time JSON broadcast of `PresenceSnapshot` on `/api/events`.
-   - Emits delta events: `presence.resolved`, `scene.changed`, `pomodoro.tick`, `lyrics.changed`, `system.metrics`.
+1. **Discord Rich Presence (`outputs/discord`)**: Dispatches `SET_ACTIVITY` frames via Linux IPC socket rendered using active Scene's template.
+2. **Popup UI WebSocket Stream (`api/server.ts`)**: Real-time JSON broadcast of `PresenceSnapshot` on `/api/events`.
 
 ---
 
 ## 9. Template Engine
 
-The template engine in `packages/core/src/template-engine.ts` replaces tokens safely without `eval` or arbitrary script execution.
-
-### 9.1 Supported Tokens
-| Token | Source | Example Output |
-| :--- | :--- | :--- |
-| `{app}` | Niri Focused App | `Visual Studio Code` |
-| `{project}` | Sanitized Window Title | `niri-sync-discord` |
-| `{track}` | MPRIS Metadata | `Chuyện Đôi Ta` |
-| `{artist}` | MPRIS Metadata | `Da LAB` |
-| `{album}` | MPRIS Metadata | `After Hours` |
-| `{lyric}` | Active Synced Lyric | `Mình đã từng nghĩ sẽ bên nhau...` |
-| `{player}` | MPRIS Player Name | `Spotify` |
-| `{pomodoro.task}` | Pomodoro Engine | `Calculus II Homework` |
-| `{pomodoro.remaining}` | Pomodoro Engine | `23:45` |
-| `{pomodoro.session}` | Pomodoro Engine | `2/4` |
-| `{pomodoro.state}` | Pomodoro Engine | `Focus` / `Short Break` |
-| `{countdown.name}` | Countdown Target | `THPTQG 2027` |
-| `{countdown.days}` | Countdown Target | `309` |
-| `{countdown.hours}` | Countdown Target | `14` |
-| `{system.cpu}` | System Source | `14%` |
-| `{system.ram}` | System Source | `42%` |
-| `{system.battery}` | System Source | `88%` |
-| `{time}` | Monotonic Clock | `14:37` |
-| `{date}` | Monotonic Clock | `Aug 20` |
-
-### 9.2 Fallback Strategy
-If a token references an unavailable source (e.g. `{lyric}` when lyrics are not found, or `{track}` when player is closed), the template engine collapses the token cleanly or substitutes a configured fallback (e.g. artist/album).
+Safe token-based string replacement in `packages/core/src/template-engine.ts`:
+`{track}`, `{artist}`, `{album}`, `{lyric}`, `{player}`, `{pomodoro.task}`, `{pomodoro.remaining}`, `{pomodoro.session}`, `{countdown.name}`, `{countdown.days}`, `{system.cpu}`, `{system.ram}`, `{time}`, `{date}`.
 
 ---
 
 ## 10. Lyrics UX
 
-### 10.1 Presentation States
-- **`synced`**: Synchronized LRC lines available. Rendered in **3-Line Focus View** (previous line, active highlighted line with glowing accent, next line) with smooth translateY transitions.
+- **`synced`**: 3-Line Focus View (previous line, active highlighted line with glow accent, next line) with smooth translateY transitions.
 - **`plain-only`**: Scrollable plain text lyrics.
 - **`instrumental`**: Instrumental badge with music waveform icon.
 - **`loading`**: Subtle pulse placeholder while LRCLIB queries.
 - **`not-found`**: Clean fallback showing track metadata without clutter.
-- **`uncertain-match`**: Displays warning chip (`Match confidence < 70%`) with "Search Alternative" action.
 
 ---
 
 ## 11. Pomodoro Engine
 
-### 11.1 State Machine
-```text
-  ┌───────────┐    Start     ┌───────────┐
-  │   IDLE    ├─────────────►│   FOCUS   │
-  └─────▲─────┘              └─────┬─────┘
-        │                          │ Timer Expired (Session < 4)
-        │ Reset                    ▼
-        │                    ┌───────────┐
-        ├────────────────────┤ S-BREAK   │
-        │                    └─────┬─────┘
-        │                          │ Timer Expired (Session == 4)
-        │                          ▼
-        │                    ┌───────────┐
-        └────────────────────┤ L-BREAK   │
-                             └───────────┘
-```
-- **Durations**: Configurable (Default: 25m Focus, 5m Short Break, 15m Long Break, 4 sessions).
-- **Monotonic Anchor**: Anchored against `performance.now()`; survives popup closing/reopening and system sleep.
-- **Persistence**: Active session state stored in SQLite so restarting daemon preserves remaining seconds.
+State machine: `idle` -> `focus` -> `short_break` -> `long_break`.
+Monotonic timer anchored to `performance.now()`; survives popup hide/show and daemon restarts via SQLite persistence.
 
 ---
 
 ## 12. Countdown Engine
 
-- **Data Model**:
-  ```ts
-  export interface CountdownItem {
-    id: string;
-    title: string;
-    targetDate: string; // ISO 8601 string
-    category: "exam" | "project" | "holiday" | "personal";
-    icon?: string;
-    enabled: boolean;
-    showOnDiscord: boolean;
-  }
-  ```
-- **Math**: Computes exact days, hours, minutes remaining to target timestamp.
-- **Formatting**: Short format (`309d 14h`) and verbose format (`309 days remaining`).
+Stores user milestones with ISO target timestamps and calculates days/hours remaining dynamically.
 
 ---
 
 ## 13. System Metrics Source
 
-- **Linux `/proc` & `/sys` Readers**:
-  - `CPU`: Delta calculation between consecutive `/proc/stat` reads.
-  - `Memory`: Parsed from `MemTotal` and `MemAvailable` in `/proc/meminfo`.
-  - `Battery`: Capacity & status read from `/sys/class/power_supply/BAT0/capacity`.
-  - `Temperature`: Thermal zone read from `/sys/class/thermal/thermal_zone0/temp`.
-- **Sampling Rate**: Polled every 4 seconds in the daemon; emits only when changed > 2% to minimize CPU overhead.
+Reads `/proc/stat`, `/proc/meminfo`, `/sys/class/power_supply/`, `/sys/class/thermal/` with 4s bounded polling and 2% change threshold.
 
 ---
 
 ## 14. Settings & Configuration
 
-Settings are accessed via a slide-over drawer inside the popup app:
-- **General**: Startup with systemd, daemon port (default 4242), loopback bind address.
-- **Scenes & Presets**: Select active template presets, manage custom templates.
-- **Pomodoro Config**: Focus duration, break durations, notification sound toggles.
-- **Countdowns**: Add, edit, remove milestone targets.
-- **App Rules & Privacy**: Per-app priority overrides, sanitization rules, and blacklisted app IDs.
-- **Diagnostics**: Live telemetry status, socket paths, and LRCLIB cache clear button.
+Slide-over drawer inside popup: general daemon settings, template presets, Pomodoro parameters, countdowns manager, app rules, and Niri integration snippet.
 
 ---
 
 ## 15. Secret Management
 
-- **Zero Plaintext Token Storage**: No API secrets or tokens are stored in browser `localStorage`.
-- **Local IPC Authentication**: When the popup connects to `ws://127.0.0.1:4242/api/events`, the daemon authenticates the connection using a local cookie/token stored in `$XDG_RUNTIME_DIR/presenced.token` (permissions `0600`).
-- **OS Secret Service**: If external APIs requiring authentication are added in the future, tokens are stored via `libsecret` / OS keyring through a minimal Tauri command.
+Zero plaintext token storage in browser `localStorage`. Local IPC cookie/token in `$XDG_RUNTIME_DIR/presenced.token` (`0600` permissions) for API authentication.
 
 ---
 
 ## 16. Persistence Architecture
 
-Persistent state is stored in SQLite (`~/.config/presenced/presenced.db`) with WAL mode enabled:
-- **`kv_store`**: Key-value JSON storage for `rules`, `scenes`, `templates`, `pomodoro_state`, `privacy_mode`.
-- **`countdowns`**: Relational table for user milestones `(id, title, target_date, category, enabled, show_on_discord, updated_at)`.
-- **`lyrics_cache`**: Synced/plain lyrics cache `(track_key, payload, expires_at)`.
-- **`activity_history`**: Bounded table for recent resolved activities `(id, candidate_id, category, title, details, reason, timestamp)`.
+SQLite (`~/.config/presenced/presenced.db`) with WAL mode: `kv_store`, `countdowns`, `lyrics_cache`, `activity_history`.
 
 ---
 
 ## 17. Privacy Architecture
 
-1. **Title Masking**: Raw window titles remain private by default unless a specific rule enables `allowSanitizedTitle`.
-2. **Instant Privacy Scene**: Toggle in Header or shortcut immediately sets Discord activity to `"Privacy Mode"` and clears details.
-3. **App Rules**: Per-app policy configurations:
-   - `hide`: Excludes window from presence resolution completely.
-   - `genericize`: Uses generic app name (e.g. "Web Browser" instead of page URL/title).
-   - `customTitle`: Replaces title with static user string.
+Title masking by default; one-click Privacy Scene; per-app rules (`hide`, `genericize`, `customTitle`).
 
 ---
 
 ## 18. Tauri v2 Application Architecture
 
-- **Path**: `apps/popup/`
-- **Frontend (`apps/popup/src/`)**:
-  - React 19 + TypeScript + Tailwind CSS + Lucide Icons.
-  - Consumes WebSocket stream from `127.0.0.1:4242/api/events`.
-  - State management via custom hook `usePresenceCompanion()`.
-- **Tauri Rust Core (`apps/popup/src-tauri/`)**:
-  - Minimal `main.rs` configuring `tauri-plugin-shell`, `tauri-plugin-global-shortcut`, and `tauri-plugin-window-state`.
-  - Configures borderless window with transparent background, decorations disabled, and Wayland layer-shell/floating hints.
+- `apps/popup/src/`: React 19 + TypeScript + Tailwind CSS.
+- `apps/popup/src-tauri/`: Minimal Rust bootstrap, Wayland layer-shell configuration, and global shortcut listener.
 
 ---
 
 ## 19. Old Web App Migration Decision
 
-- **Decision**: **Retire `apps/web` as primary app** and establish `apps/popup` as the flagship product.
-- **Migration Strategy**:
-  1. Extract battle-tested UI primitives (`LyricsView` math, `DiscordPreviewCard` ticker, `IntegrationsHealthRow` status configs) into `apps/popup/src/components/`.
-  2. The daemon's `ApiServer` static asset route will point to `apps/popup/dist` for headless browser fallback inspection if requested, but standalone desktop execution is driven by Tauri v2.
-  3. Delete obsolete large dashboard grid views in favor of compact vertical cards.
+Retire `apps/web` as primary app; migrate reusable components to `apps/popup/src/components/`.
 
 ---
 
 ## 20. Failure and Degraded States
 
-| Failure Scenario | System Response | Popup UI Display |
-| :--- | :--- | :--- |
-| **Daemon not running** | Popup WebSocket retries with exponential backoff (1s -> 5s). | Displays amber "Connecting to presenced daemon..." banner with retry button. |
-| **Niri not running / crashed** | `NiriSource` attempts reconnect every 3s. | Niri indicator shows "Reconnecting" / "Unsupported"; fallback to MPRIS/Manual. |
-| **No active media player** | `MprisSource` clears media fact. | Music scene displays clean idle placeholder; auto-resolver selects next candidate. |
-| **LRCLIB unavailable / 404** | Negative cached for 1 hour; uses `/search` fallback. | Shows "No lyrics found" or plain track metadata without layout jump. |
-| **Discord not running** | `DiscordRpcClient` reconnects every 5s. | Discord preview shows "Discord Offline (Waiting for IPC socket)". |
+Handled gracefully with reconnection backoff and explicit UI status indicators.
 
 ---
 
 ## 21. Test Strategy
 
-1. **Unit Tests (Vitest)**:
-   - Template engine token replacement and edge cases (`template-engine.test.ts`).
-   - Scene resolver priority and fallback logic (`scene-resolver.test.ts`).
-   - Pomodoro state transitions and duration math (`pomodoro.test.ts`).
-   - Countdown days calculation and leap year handling (`countdown.test.ts`).
-   - System metrics parser (`system-metrics.test.ts`).
-2. **Integration Tests (Vitest)**:
-   - Daemon WebSocket broadcast of scene and pomodoro events (`daemon-scenes.test.ts`).
-   - SQLite persistence of countdowns and templates (`database-v2.test.ts`).
-3. **UI / Smoke Tests**:
-   - Component rendering in popup shell at fixed 380px width.
-   - Long text, Vietnamese diacritics, and Japanese CJK string wrapping.
-   - Reduced-motion mode verification.
+100% coverage across Vitest unit/integration tests and UI review checks.
 
 ---
 
 ## 22. Technical Risks & Mitigations
 
-1. **Wayland Floating / Positioning**: Wayland compositors restrict arbitrary client window positioning.
-   - *Mitigation*: Configure standard Wayland floating rules for `app_id: "presenced-popup"` in Niri configuration (`window-rules { match app-id="presenced-popup" { open-floating true; default-column-width { fixed 380; }; } }`).
-2. **Audio/Video MPRIS Desync**: Video players (MPV, Chromium) pausing without sending position anchors.
-   - *Mitigation*: Use monotonic elapsed math clamped to track duration; reset anchor immediately on pause event.
-3. **Template Token Injection / Exploitation**: Malicious tokens in window titles.
-   - *Mitigation*: Tokens are parsed via single-pass regex matching against a strict whitelist; inputs are sanitized and escaped before substitution.
+Documented and verified via research spike.
 
 ---
 
 ## 23. Definition of Done
 
-A task in this V2 pivot is done when:
-1. All TypeScript code compiles strictly with 0 errors (`strict: true`, `noUncheckedIndexedAccess: true`).
-2. Vitest unit and integration test suite passes 100%.
-3. Tauri v2 desktop popup builds and runs natively on Linux/Wayland.
-4. Discord RPC outputs accurate payloads according to active Scenes and Templates.
-5. Pomodoro and Countdown features function and persist across daemon restarts.
-6. Documentation and rules are updated in sync with implementation.
+Strict typecheck, passing Vitest suite, native Wayland popup execution, zero regressions.
+
+---
+
+## 24. Native Niri / Wayland Integration
+
+### 24.1 Architecture & Layer Policy
+- **Primary Mode**: Wayland native + `wlr-layer-shell` via `gtk-layer-shell` on GTK3 WebKitGTK window handle.
+- **Layer**: `Layer::Top` (sits above normal tiled windows and status bars).
+- **Placement**: Anchored `Top | Right` with `16px` top and right margins on the currently focused Niri output.
+- **Namespace**: `niri-sync-discord`
+- **Application ID**: `io.niruss.niri-sync-discord`
+
+### 24.2 NiriShellAdapter & Output Sync
+`NiriShellAdapter` monitors Niri's JSON event stream (`niri msg --json event-stream`):
+- Tracks `focused-output` dynamically (e.g. `HDMI-A-3` vs `DP-4`).
+- Listens to workspace changes and overview toggle events (`OverviewOpened` / `OverviewClosed`).
+- Hides popup smoothly during overview without destroying DOM state.
+
+### 24.3 Focus Protection Semantics
+When the popup receives keyboard interactivity or focus, `PresenceStore` detects that the focused window or layer surface belongs to `niri-sync-discord` / `io.niruss.niri-sync-discord`. Instead of switching presence candidate to `Idle`, the presence engine preserves the last meaningful desktop activity (e.g. `Coding`).
+
+### 24.4 Normal Window Fallback
+If `gtk-layer-shell` is unavailable, `PopupSurfaceAdapter` falls back to an ordinary floating Tauri window with recommended Niri window rule:
+```kdl
+window-rule {
+    match app-id="io.niruss.niri-sync-discord"
+    open-floating true
+    default-column-width { fixed 390; }
+}
+```
+
+### 24.5 Desktop Appearance & Semantic Design Tokens
+`DesktopAppearanceSource` reads dark/light preferences and system theme to expose design tokens (`background`, `surface`, `surfaceElevated`, `text`, `textMuted`, `accent`, `warning`, `danger`, `success`, `border`, `radius`, `blur`).

@@ -1,6 +1,6 @@
 # Niri Sync Discord — Popup-First V2 Implementation Plan
 
-**Document Version:** 2.0.0  
+**Document Version:** 2.1.0  
 **Date:** 2026-08-20  
 **Status:** Approved Implementation Plan  
 **Target Repository:** `NirussVn0/niri-sync-discord`
@@ -10,8 +10,8 @@
 ## Roadmap & Vertical Slices Overview
 
 ```text
-Phase 0: Monorepo Contracts & Tauri v2 Popup Shell
-Phase 1: Real-time Daemon State Connection & Header Widget
+Phase 0: Technical Spike, Monorepo Contracts & Tauri v2 Shell
+Phase 1: NiriShellAdapter, Daemon State Stream & Header Widget
 Phase 2: Niri Desktop Context & Window Card
 Phase 3: MPRIS Music & Media Player Card
 Phase 4: Discord RPC Preview & Synchronization
@@ -27,7 +27,16 @@ Phase 12: Visual Polish, UI Review, and Production Packaging
 
 ---
 
-## Phase 0: Monorepo Contracts & Tauri v2 Popup Shell
+## Phase 0: Technical Spike, Monorepo Contracts & Tauri v2 Shell
+
+### Task 0.0: Native Niri / Wayland / Layer-Shell Technical Spike
+- **Goal**: Experimentally verify Tauri v2 + native Wayland + WebKit2GTK 4.1 + `gtk-layer-shell` on the current Niri dual-monitor setup (`HDMI-A-3` + `DP-4`).
+- **Files**:
+  - `docs/research/tauri-niri-wayland-layer-shell.md`
+- **Dependencies**: None.
+- **Tests**: Verify `WAYLAND_DISPLAY=wayland-1`, `niri msg --json outputs`, `niri msg --json workspaces`, and `pkg-config --modversion gtk-layer-shell-0 webkit2gtk-4.1`.
+- **Acceptance Criteria**: Documented actual runtime evidence proving layer-shell feasibility and normal window fallback rule.
+- **Commit**: `docs: research tauri v2 niri wayland layer shell feasibility`
 
 ### Task 0.1: Extend Shared Contracts
 - **Goal**: Define domain schemas for `Scene`, `Template`, `PomodoroFact`, `CountdownFact`, and `SystemFact` in `@presenced/contracts`.
@@ -38,7 +47,7 @@ Phase 12: Visual Polish, UI Review, and Production Packaging
   - `packages/contracts/src/countdowns.ts`
   - `packages/contracts/src/system.ts`
   - `packages/contracts/src/index.ts`
-- **Dependencies**: None.
+- **Dependencies**: Task 0.0.
 - **Tests**: `packages/contracts/src/__tests__/contracts-v2.test.ts`
 - **Acceptance Criteria**: All schemas parse valid payloads and reject invalid/malformed structures.
 - **Commit**: `feat(contracts): add scene, template, pomodoro, countdown and system schemas`
@@ -58,12 +67,12 @@ Phase 12: Visual Polish, UI Review, and Production Packaging
   - `pnpm-workspace.yaml`
 - **Dependencies**: Task 0.1.
 - **Tests**: `pnpm --filter @presenced/popup build`
-- **Acceptance Criteria**: Tauri popup builds and opens a compact (380px), borderless, transparent desktop window.
+- **Acceptance Criteria**: Tauri popup builds cleanly and opens a compact (380px), borderless, transparent desktop window.
 - **Commit**: `feat(popup): bootstrap Tauri v2 desktop companion shell`
 
 ---
 
-## Phase 1: Real-time Daemon State Connection & Header Widget
+## Phase 1: NiriShellAdapter, Daemon State Stream & Header Widget
 
 ### Task 1.1: Live WebSocket Connection Hook
 - **Goal**: Implement `usePresenceCompanion` hook in `apps/popup/src/hooks/usePresenceCompanion.ts` to stream full snapshot and delta events from `127.0.0.1:4242/api/events`.
@@ -75,12 +84,22 @@ Phase 12: Visual Polish, UI Review, and Production Packaging
 - **Acceptance Criteria**: Hook reports `connected: true`, receives live daemon updates, and recovers from daemon restart.
 - **Commit**: `feat(popup): connect live daemon state via WebSocket companion hook`
 
-### Task 1.2: Compact Header & Profile Greeting Widget
+### Task 1.2: NiriShellAdapter & Output Alignment
+- **Goal**: Add `NiriShellAdapter` to daemon tracking `focused-output`, active workspace, and overview state (`niri msg --json event-stream`).
+- **Files**:
+  - `apps/daemon/src/sources/niri/niri-shell-adapter.ts`
+  - `apps/daemon/src/__tests__/niri-shell-adapter.test.ts`
+- **Dependencies**: Task 1.1.
+- **Tests**: Verify output change events and workspace tracking.
+- **Acceptance Criteria**: Accurately reports focused output (`HDMI-A-3` vs `DP-4`) and suppresses idle state when popup has focus.
+- **Commit**: `feat(daemon): add NiriShellAdapter for focused output and workspace tracking`
+
+### Task 1.3: Compact Header & Profile Greeting Widget
 - **Goal**: Implement compact top header displaying avatar, localized time, day/date, and live connection status pill.
 - **Files**:
   - `apps/popup/src/components/HeaderWidget.tsx`
   - `apps/popup/src/App.tsx`
-- **Dependencies**: Task 1.1.
+- **Dependencies**: Task 1.2.
 - **Tests**: `apps/popup/src/__tests__/header-widget.test.ts`
 - **Acceptance Criteria**: Header renders greeting, current time ticking every second, and active Niri workspace badge.
 - **Commit**: `feat(popup): add compact profile and greeting header widget`
@@ -93,7 +112,7 @@ Phase 12: Visual Polish, UI Review, and Production Packaging
 - **Goal**: Build compact desktop card displaying focused application icon, sanitized title, and app ID.
 - **Files**:
   - `apps/popup/src/components/DesktopCard.tsx`
-- **Dependencies**: Task 1.2.
+- **Dependencies**: Task 1.3.
 - **Tests**: Component test asserting proper truncation on long window titles.
 - **Acceptance Criteria**: Displays current Niri focus clearly with app category badge and sanitization indicators.
 - **Commit**: `feat(popup): add compact desktop focus context card`
