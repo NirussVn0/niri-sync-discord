@@ -6,16 +6,32 @@ import { DesktopCard } from "./components/DesktopCard.js";
 import { MusicCard } from "./components/MusicCard.js";
 import { FocusedLyricsView } from "./components/FocusedLyricsView.js";
 import { DiscordPreview } from "./components/DiscordPreview.js";
-import { Shield, Settings, MessageSquare, Clock } from "lucide-react";
+import { PomodoroCard } from "./components/PomodoroCard.js";
+import { CountdownCard } from "./components/CountdownCard.js";
+import { SystemCard } from "./components/SystemCard.js";
+import { SettingsDrawer } from "./components/SettingsDrawer.js";
+import { Shield, Settings, MessageSquare } from "lucide-react";
 
 export function App() {
-  const { snapshot, wsConnected, setPrivacyMode, switchScene } = usePresenceCompanion();
+  const {
+    snapshot,
+    wsConnected,
+    setPrivacyMode,
+    switchScene,
+    startPomodoro,
+    pausePomodoro,
+    resumePomodoro,
+    stopPomodoro,
+    skipPomodoro,
+  } = usePresenceCompanion();
+
   const [showDiscordPreview, setShowDiscordPreview] = useState(false);
+  const [showSettingsDrawer, setShowSettingsDrawer] = useState(false);
 
   const activeSceneType = snapshot?.scene?.activeSceneType ?? "auto";
 
   return (
-    <div className="w-[380px] min-h-[560px] max-h-[660px] bg-background/95 backdrop-blur-md border border-surface-border rounded-2xl p-4 text-slate-100 flex flex-col justify-between shadow-2xl select-none font-sans overflow-hidden">
+    <div className="relative w-[380px] min-h-[560px] max-h-[660px] bg-background/95 backdrop-blur-md border border-surface-border rounded-2xl p-4 text-slate-100 flex flex-col justify-between shadow-2xl select-none font-sans overflow-hidden">
       {/* Top Profile / Greeting Widget */}
       <HeaderWidget
         wsConnected={wsConnected}
@@ -43,31 +59,55 @@ export function App() {
           />
         ) : (
           <>
-            {/* If Media is playing or activeScene is music -> show MusicCard + FocusedLyricsView */}
-            {snapshot?.media && (
+            {/* 1. If scene is explicit pomodoro -> show full PomodoroCard */}
+            {activeSceneType === "pomodoro" && (
+              <PomodoroCard
+                pomodoro={snapshot?.pomodoro}
+                onStart={(task) => startPomodoro(task)}
+                onPause={pausePomodoro}
+                onResume={resumePomodoro}
+                onStop={stopPomodoro}
+                onSkip={skipPomodoro}
+              />
+            )}
+
+            {/* 2. If scene is explicit countdown -> show CountdownCard */}
+            {activeSceneType === "countdown" && (
+              <CountdownCard countdown={snapshot?.countdown} />
+            )}
+
+            {/* 3. If scene is explicit system -> show SystemCard */}
+            {activeSceneType === "system" && (
+              <SystemCard system={snapshot?.system} />
+            )}
+
+            {/* 4. If media is playing -> show MusicCard + FocusedLyricsView */}
+            {snapshot?.media && activeSceneType !== "pomodoro" && activeSceneType !== "countdown" && activeSceneType !== "system" && (
               <div className="space-y-2.5">
                 <MusicCard media={snapshot.media} />
                 <FocusedLyricsView lyrics={snapshot.lyrics} media={snapshot.media} />
               </div>
             )}
 
-            {/* Desktop Context Card (shown if no media or if activeScene is auto/focus) */}
-            {(!snapshot?.media || activeSceneType === "focus" || activeSceneType === "auto") && (
-              <DesktopCard
-                desktop={snapshot?.desktop}
-                presence={snapshot?.presence}
-                privacyMode={snapshot?.privacyMode}
-              />
-            )}
+            {/* 5. Desktop Context Card (shown if no media or if activeScene is auto/focus) */}
+            {(!snapshot?.media || activeSceneType === "focus" || activeSceneType === "auto") &&
+              activeSceneType !== "pomodoro" &&
+              activeSceneType !== "countdown" &&
+              activeSceneType !== "system" && (
+                <DesktopCard
+                  desktop={snapshot?.desktop}
+                  presence={snapshot?.presence}
+                  privacyMode={snapshot?.privacyMode}
+                />
+              )}
 
-            {/* Pomodoro Quick Mini Widget */}
-            <div className="p-3 rounded-xl bg-surface/60 border border-surface-border flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-emerald-400" />
+            {/* 6. Mini Pomodoro quick widget when not in dedicated pomodoro scene */}
+            {activeSceneType !== "pomodoro" && (
+              <div className="p-3 rounded-xl bg-surface/60 border border-surface-border flex items-center justify-between">
                 <div>
                   <div className="text-xs font-semibold text-slate-200">Pomodoro Focus</div>
                   <div className="text-[10px] text-slate-400 font-mono">
-                    {snapshot?.pomodoro
+                    {snapshot?.pomodoro?.status === "running"
                       ? `${Math.floor(snapshot.pomodoro.remainingSeconds / 60)}:${String(
                           snapshot.pomodoro.remainingSeconds % 60
                         ).padStart(2, "0")} · Session ${snapshot.pomodoro.currentSession}/${
@@ -76,14 +116,19 @@ export function App() {
                       : "25:00 · Ready to start"}
                   </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    snapshot?.pomodoro?.status === "running"
+                      ? pausePomodoro()
+                      : startPomodoro()
+                  }
+                  className="px-2.5 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-medium transition-colors"
+                >
+                  {snapshot?.pomodoro?.status === "running" ? "Pause" : "Start"}
+                </button>
               </div>
-              <button
-                type="button"
-                className="px-2.5 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-medium transition-colors"
-              >
-                Start
-              </button>
-            </div>
+            )}
           </>
         )}
       </div>
@@ -121,6 +166,7 @@ export function App() {
           <span className="text-[10px] text-slate-500 font-mono">v0.2.0</span>
           <button
             type="button"
+            onClick={() => setShowSettingsDrawer(true)}
             className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 hover:text-white transition-colors"
             title="Settings Drawer"
           >
@@ -128,6 +174,14 @@ export function App() {
           </button>
         </div>
       </div>
+
+      {/* Slide-Over Settings Drawer */}
+      <SettingsDrawer
+        isOpen={showSettingsDrawer}
+        onClose={() => setShowSettingsDrawer(false)}
+        snapshot={snapshot}
+        onSetPrivacyMode={(enabled) => setPrivacyMode(enabled)}
+      />
     </div>
   );
 }
