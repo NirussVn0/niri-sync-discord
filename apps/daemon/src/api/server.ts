@@ -14,6 +14,7 @@ import {
 } from "@presenced/contracts";
 import { PresenceStore } from "../state/presence-store.js";
 import { PomodoroEngine } from "../sources/pomodoro/pomodoro-engine.js";
+import { CountdownEngine } from "../sources/countdown/countdown-engine.js";
 
 export interface ApiServerOptions {
   port?: number;
@@ -21,6 +22,7 @@ export interface ApiServerOptions {
   staticDir?: string;
   store: PresenceStore;
   pomodoroEngine?: PomodoroEngine;
+  countdownEngine?: CountdownEngine;
 }
 
 export class ApiServer {
@@ -28,6 +30,7 @@ export class ApiServer {
   private wss: WebSocketServer | null = null;
   private readonly store: PresenceStore;
   private readonly pomodoroEngine: PomodoroEngine | null = null;
+  private readonly countdownEngine: CountdownEngine | null = null;
   private readonly port: number;
   private readonly host: string;
   private readonly staticDir: string | null;
@@ -37,6 +40,7 @@ export class ApiServer {
   constructor(options: ApiServerOptions) {
     this.store = options.store;
     this.pomodoroEngine = options.pomodoroEngine ?? null;
+    this.countdownEngine = options.countdownEngine ?? null;
     this.port = options.port ?? 4242;
     this.host = options.host ?? "127.0.0.1";
     this.staticDir = options.staticDir ?? ApiServer.findDefaultStaticDir();
@@ -194,6 +198,48 @@ export class ApiServer {
 
     this.app.post("/api/pomodoro/skip", (c) => {
       this.pomodoroEngine?.skip();
+      return c.json(this.store.getSnapshot());
+    });
+
+    // Countdown endpoints
+    this.app.get("/api/countdowns", (c) => {
+      if (!this.countdownEngine) {
+        return c.json({ countdowns: [], activeFact: null });
+      }
+      return c.json({
+        activeFact: this.countdownEngine.getFact(),
+      });
+    });
+
+    this.app.post("/api/countdowns", async (c) => {
+      try {
+        const body = await c.req.json();
+        if (this.countdownEngine) {
+          const item = this.countdownEngine.addCountdown({
+            title: body.title,
+            targetDate: body.targetDate,
+            category: body.category ?? "personal",
+            icon: body.icon,
+            enabled: body.enabled ?? true,
+            showOnDiscord: body.showOnDiscord ?? false,
+          });
+          return c.json({ item, snapshot: this.store.getSnapshot() });
+        }
+        return c.json(this.store.getSnapshot());
+      } catch {
+        return c.json({ error: "Invalid JSON" }, 400);
+      }
+    });
+
+    this.app.delete("/api/countdowns/:id", (c) => {
+      const id = c.req.param("id");
+      this.countdownEngine?.removeCountdown(id);
+      return c.json(this.store.getSnapshot());
+    });
+
+    this.app.post("/api/countdowns/:id/toggle", (c) => {
+      const id = c.req.param("id");
+      this.countdownEngine?.toggleCountdown(id);
       return c.json(this.store.getSnapshot());
     });
 

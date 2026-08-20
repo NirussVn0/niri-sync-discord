@@ -25,7 +25,10 @@ describe("CountdownEngine & SQLite Persistence", () => {
 
   it("adds, sorts, and calculates closest upcoming countdown", () => {
     const now = Date.now();
-    const futureDate1 = new Date(now + 10 * 24 * 60 * 60 * 1000 + 4 * 60 * 60 * 1000).toISOString(); // 10d 4h
+    // Add 10 seconds margin to prevent clock tick boundary flakiness
+    const futureDate1 = new Date(
+      now + 10 * 24 * 60 * 60 * 1000 + 4 * 60 * 60 * 1000 + 10000
+    ).toISOString(); // 10d 4h
     const futureDate2 = new Date(now + 30 * 24 * 60 * 60 * 1000).toISOString(); // 30d
 
     engine.addCountdown({
