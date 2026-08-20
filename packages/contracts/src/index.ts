@@ -4,3 +4,8 @@ export * from "./rules.js";
 export * from "./presence.js";
 export * from "./events.js";
 export * from "./lyrics.js";
+export * from "./scenes.js";
+export * from "./templates.js";
+export * from "./pomodoro.js";
+export * from "./countdowns.js";
+export * from "./system.js";
