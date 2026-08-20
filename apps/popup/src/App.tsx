@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { SceneType } from "@presenced/contracts";
 import { usePresenceCompanion } from "./hooks/usePresenceCompanion.js";
 import { HeaderWidget } from "./components/HeaderWidget.js";
 import { SceneSelector } from "./components/SceneSelector.js";
@@ -31,10 +32,16 @@ export function App() {
     toggleCountdown,
   } = usePresenceCompanion();
 
+  const [localScene, setLocalScene] = useState<SceneType | null>(null);
   const [showDiscordPreview, setShowDiscordPreview] = useState(false);
   const [showSettingsDrawer, setShowSettingsDrawer] = useState(false);
 
-  const activeSceneType = snapshot?.scene?.activeSceneType ?? "auto";
+  const activeSceneType = localScene ?? snapshot?.scene?.activeSceneType ?? "auto";
+
+  const handleSelectScene = (sceneType: SceneType) => {
+    setLocalScene(sceneType);
+    switchScene(sceneType);
+  };
 
   return (
     <div className="relative w-[380px] min-h-[560px] max-h-[660px] bg-background/95 backdrop-blur-md border border-surface-border rounded-2xl p-4 text-slate-100 flex flex-col justify-between shadow-2xl select-none font-sans overflow-hidden">
@@ -50,7 +57,7 @@ export function App() {
       <div className="pt-2.5">
         <SceneSelector
           activeSceneType={activeSceneType}
-          onSelectScene={(type) => switchScene(type)}
+          onSelectScene={handleSelectScene}
         />
       </div>
 
@@ -65,7 +72,7 @@ export function App() {
           />
         ) : (
           <>
-            {/* 1. If scene is explicit pomodoro -> show full PomodoroCard */}
+            {/* 1. Pomodoro Scene */}
             {activeSceneType === "pomodoro" && (
               <PomodoroCard
                 pomodoro={snapshot?.pomodoro}
@@ -77,45 +84,83 @@ export function App() {
               />
             )}
 
-            {/* 2. If scene is explicit countdown -> show CountdownCard */}
+            {/* 2. Milestone Countdown Scene */}
             {activeSceneType === "countdown" && (
               <CountdownCard countdown={snapshot?.countdown} />
             )}
 
-            {/* 3. If scene is explicit system -> show SystemCard */}
+            {/* 3. Linux System Telemetry Scene */}
             {activeSceneType === "system" && (
               <SystemCard system={snapshot?.system} />
             )}
 
-            {/* 4. If media is playing -> show MusicCard + FocusedLyricsView */}
-            {snapshot?.media &&
-              activeSceneType !== "pomodoro" &&
-              activeSceneType !== "countdown" &&
-              activeSceneType !== "system" && (
-                <div className="space-y-2.5">
-                  <MusicCard
-                    media={snapshot.media}
-                    onPlayPause={playPauseMedia}
-                    onNext={nextMedia}
-                    onPrevious={previousMedia}
-                  />
-                  <FocusedLyricsView lyrics={snapshot.lyrics} media={snapshot.media} />
-                </div>
-              )}
+            {/* 4. Privacy Mode Scene */}
+            {activeSceneType === "privacy" && (
+              <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-center space-y-2 py-8 select-none">
+                <Shield className="w-8 h-8 text-amber-400 mx-auto" />
+                <div className="text-sm font-bold text-amber-300">Privacy Mode Active</div>
+                <p className="text-xs text-slate-400">
+                  Window titles and media metadata are masked with generic activity descriptions.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPrivacyMode(false);
+                    handleSelectScene("auto");
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/30 text-xs font-semibold transition-colors"
+                >
+                  Disable Privacy Mode
+                </button>
+              </div>
+            )}
 
-            {/* 5. Desktop Context Card (shown if no media or if activeScene is auto/focus) */}
-            {(!snapshot?.media || activeSceneType === "focus" || activeSceneType === "auto") &&
-              activeSceneType !== "pomodoro" &&
-              activeSceneType !== "countdown" &&
-              activeSceneType !== "system" && (
-                <DesktopCard
-                  desktop={snapshot?.desktop}
-                  presence={snapshot?.presence}
-                  privacyMode={snapshot?.privacyMode}
+            {/* 5. Dedicated Music Scene */}
+            {activeSceneType === "music" && (
+              <div className="space-y-2.5">
+                <MusicCard
+                  media={snapshot?.media}
+                  onPlayPause={playPauseMedia}
+                  onNext={nextMedia}
+                  onPrevious={previousMedia}
                 />
-              )}
+                <FocusedLyricsView lyrics={snapshot?.lyrics} media={snapshot?.media} />
+              </div>
+            )}
 
-            {/* 6. Mini Pomodoro quick widget when not in dedicated pomodoro scene */}
+            {/* 6. Dedicated Focus Desktop Scene */}
+            {activeSceneType === "focus" && (
+              <DesktopCard
+                desktop={snapshot?.desktop}
+                presence={snapshot?.presence}
+                privacyMode={snapshot?.privacyMode}
+              />
+            )}
+
+            {/* 7. Auto Context Scene */}
+            {activeSceneType === "auto" && (
+              <>
+                {snapshot?.media ? (
+                  <div className="space-y-2.5">
+                    <MusicCard
+                      media={snapshot.media}
+                      onPlayPause={playPauseMedia}
+                      onNext={nextMedia}
+                      onPrevious={previousMedia}
+                    />
+                    <FocusedLyricsView lyrics={snapshot.lyrics} media={snapshot.media} />
+                  </div>
+                ) : (
+                  <DesktopCard
+                    desktop={snapshot?.desktop}
+                    presence={snapshot?.presence}
+                    privacyMode={snapshot?.privacyMode}
+                  />
+                )}
+              </>
+            )}
+
+            {/* Mini Pomodoro quick bar when not in dedicated pomodoro scene */}
             {activeSceneType !== "pomodoro" && (
               <div className="p-3 rounded-xl bg-surface/60 border border-surface-border flex items-center justify-between">
                 <div>
@@ -152,7 +197,12 @@ export function App() {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setPrivacyMode(!snapshot?.privacyMode)}
+            onClick={() => {
+              const nextMode = !snapshot?.privacyMode;
+              setPrivacyMode(nextMode);
+              if (nextMode) handleSelectScene("privacy");
+              else if (activeSceneType === "privacy") handleSelectScene("auto");
+            }}
             className={`p-1.5 rounded-lg border transition-colors ${
               snapshot?.privacyMode
                 ? "bg-amber-500/20 text-amber-300 border-amber-500/40"

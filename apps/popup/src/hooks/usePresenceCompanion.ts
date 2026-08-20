@@ -216,12 +216,33 @@ export function usePresenceCompanion(): UsePresenceCompanionReturn {
   };
 
   const switchScene = async (sceneType: SceneType) => {
+    // Optimistically update local snapshot
+    setSnapshot((prev) =>
+      prev
+        ? {
+            ...prev,
+            scene: {
+              ...prev.scene,
+              activeSceneType: sceneType,
+              activeSceneId: sceneType,
+              isAuto: sceneType === "auto",
+              scenes: prev.scene?.scenes ?? [],
+              updatedAt: Date.now(),
+            },
+          }
+        : prev
+    );
+
     try {
-      await fetch(`${API_HTTP_URL}/scene`, {
+      const res = await fetch(`${API_HTTP_URL}/scene`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sceneType }),
       });
+      if (res.ok) {
+        const snap = (await res.json()) as PresenceSnapshot;
+        setSnapshot(snap);
+      }
     } catch {
       // ignore
     }

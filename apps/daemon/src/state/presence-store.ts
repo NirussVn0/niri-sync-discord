@@ -129,6 +129,11 @@ export class PresenceStore extends EventEmitter {
   public setScene(sceneType: SceneType): void {
     this.manualSceneType = sceneType;
     this.recompute();
+    const event: DaemonEvent = {
+      type: "state.snapshot",
+      payload: this.getSnapshot(),
+    };
+    this.emit("event", event);
   }
 
   public getSceneType(): SceneType {
@@ -138,15 +143,30 @@ export class PresenceStore extends EventEmitter {
   public setPomodoro(fact: PomodoroFact | null): void {
     this.pomodoro = fact;
     this.recompute();
+    const event: DaemonEvent = {
+      type: "state.snapshot",
+      payload: this.getSnapshot(),
+    };
+    this.emit("event", event);
   }
 
   public setCountdown(fact: CountdownFact | null): void {
     this.countdown = fact;
     this.recompute();
+    const event: DaemonEvent = {
+      type: "state.snapshot",
+      payload: this.getSnapshot(),
+    };
+    this.emit("event", event);
   }
 
   public setSystem(fact: SystemFact | null): void {
     this.system = fact;
+    const event: DaemonEvent = {
+      type: "state.snapshot",
+      payload: this.getSnapshot(),
+    };
+    this.emit("event", event);
   }
 
   public setDesktop(fact: DesktopFact | null, immediate = false): void {
