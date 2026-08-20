@@ -1,5 +1,6 @@
 import { PresenceStore } from "./state/presence-store.js";
 import { NiriSource } from "./sources/niri/niri-source.js";
+import { MprisSource } from "./sources/mpris/mpris-source.js";
 import { ApiServer } from "./api/server.js";
 
 async function bootstrap() {
@@ -8,6 +9,7 @@ async function bootstrap() {
 
   const store = new PresenceStore();
   const niriSource = new NiriSource();
+  const mprisSource = new MprisSource();
   const apiServer = new ApiServer({ port, host, store });
 
   // Wire Niri events into the presence store
@@ -19,6 +21,15 @@ async function bootstrap() {
     store.setHealth(health);
   });
 
+  // Wire MPRIS events into the presence store
+  mprisSource.on("fact", (fact) => {
+    store.setMedia(fact);
+  });
+
+  mprisSource.on("health", (health) => {
+    store.setHealth(health);
+  });
+
   // Start API server and sources
   await apiServer.start();
   console.log(`[daemon] presenced API listening on http://${host}:${port}`);
@@ -26,9 +37,13 @@ async function bootstrap() {
   niriSource.start();
   console.log(`[daemon] Niri event stream source started`);
 
+  mprisSource.start();
+  console.log(`[daemon] MPRIS media source started`);
+
   const shutdown = async () => {
     console.log(`[daemon] Shutting down presenced...`);
     niriSource.stop();
+    mprisSource.stop();
     await apiServer.stop();
     store.stop();
     process.exit(0);

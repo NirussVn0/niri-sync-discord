@@ -2,6 +2,7 @@ import { useState } from "react";
 import { usePresenceState } from "./hooks/usePresenceState.js";
 import { Header } from "./components/Header.js";
 import { PresenceCard } from "./components/PresenceCard.js";
+import { MediaCard } from "./components/MediaCard.js";
 import { DiscordPreviewCard } from "./components/DiscordPreviewCard.js";
 import { IntegrationsHealthRow } from "./components/IntegrationsHealthRow.js";
 import { ManualOverrideModal } from "./components/ManualOverrideModal.js";
@@ -49,7 +50,7 @@ export function App() {
 
         {/* Main 2-Column Now Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Active Presence (Primary 7 cols) */}
+          {/* Active Presence & Media (Primary 7 cols) */}
           <div className="lg:col-span-7 space-y-6">
             <PresenceCard
               presence={snapshot?.presence ?? null}
@@ -58,6 +59,8 @@ export function App() {
               onOpenOverrideModal={() => setIsOverrideModalOpen(true)}
               onClearOverride={clearOverride}
             />
+
+            {snapshot?.media && <MediaCard media={snapshot.media} />}
           </div>
 
           {/* Discord Preview (Secondary 5 cols) */}
