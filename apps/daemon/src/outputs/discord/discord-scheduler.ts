@@ -50,7 +50,8 @@ export class DiscordScheduler {
 
     // Otherwise coalesce and schedule for next allowed interval
     if (!this.throttleTimer) {
-      const waitTime = this.minIntervalMs - elapsed;
+      const requiredInterval = isHighSignal ? 1000 : this.minIntervalMs;
+      const waitTime = Math.max(50, requiredInterval - elapsed);
       this.throttleTimer = setTimeout(() => {
         this.throttleTimer = null;
         this.publishNow(this.pendingPresence);

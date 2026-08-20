@@ -2,7 +2,7 @@ import { DatabaseSync } from "node:sqlite";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
-import { PresenceRules, ManualOverride, DEFAULT_PRIORITIES, AppRule } from "@presenced/contracts";
+import { PresenceRules, ManualOverride, DEFAULT_PRIORITIES, LyricsPayload } from "@presenced/contracts";
 
 export interface DatabaseOptions {
   dbPath?: string;
@@ -24,6 +24,14 @@ export class DatabaseManager {
     }
 
     this.db = new DatabaseSync(this.dbPath);
+    if (this.dbPath !== ":memory:") {
+      try {
+        this.db.exec("PRAGMA journal_mode = WAL;");
+        this.db.exec("PRAGMA synchronous = NORMAL;");
+      } catch {
+        // ignore pragma failures in unsupported environments
+      }
+    }
     this.initTables();
   }
 
@@ -40,13 +48,10 @@ export class DatabaseManager {
         updated_at INTEGER NOT NULL
       );
 
-      CREATE TABLE IF NOT EXISTS app_rules (
-        app_id TEXT PRIMARY KEY,
-        category TEXT,
-        custom_title TEXT,
-        ignore_app INTEGER NOT NULL DEFAULT 0,
-        priority_offset INTEGER,
-        updated_at INTEGER NOT NULL
+      CREATE TABLE IF NOT EXISTS lyrics_cache (
+        track_key TEXT PRIMARY KEY,
+        payload TEXT,
+        expires_at INTEGER NOT NULL
       );
     `);
   }
@@ -132,6 +137,35 @@ export class DatabaseManager {
       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
     `);
     stmt.run("manual_override", JSON.stringify(override), Date.now());
+  }
+
+  public getLyrics(trackKey: string): LyricsPayload | null {
+    try {
+      const row = this.db
+        .prepare("SELECT payload, expires_at FROM lyrics_cache WHERE track_key = ?")
+        .get(trackKey) as { payload: string | null; expires_at: number } | undefined;
+
+      if (!row || row.expires_at < Date.now()) {
+        return null;
+      }
+
+      return row.payload ? (JSON.parse(row.payload) as LyricsPayload) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  public saveLyrics(trackKey: string, payload: LyricsPayload | null, expiresAt: number): void {
+    try {
+      const stmt = this.db.prepare(`
+        INSERT INTO lyrics_cache (track_key, payload, expires_at)
+        VALUES (?, ?, ?)
+        ON CONFLICT(track_key) DO UPDATE SET payload = excluded.payload, expires_at = excluded.expires_at
+      `);
+      stmt.run(trackKey, payload ? JSON.stringify(payload) : null, expiresAt);
+    } catch {
+      // ignore
+    }
   }
 
   public close(): void {

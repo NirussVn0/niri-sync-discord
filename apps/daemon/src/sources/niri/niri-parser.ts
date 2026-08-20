@@ -7,6 +7,11 @@ import {
   NiriWindowFocusChangedEvent,
 } from "./niri-types.js";
 
+export interface NiriParseResult {
+  changed: boolean;
+  fact: DesktopFact | null;
+}
+
 export class NiriParser {
   private windows = new Map<number, NiriWindow>();
   private focusedWindowId: number | null = null;
@@ -14,12 +19,12 @@ export class NiriParser {
 
   /**
    * Process a single JSON line from niri event-stream.
-   * Returns a new DesktopFact if focused window changed, or null otherwise.
+   * Returns a NiriParseResult indicating if focused desktop fact changed.
    */
-  public processLine(line: string, now: number = Date.now()): DesktopFact | null {
+  public processLine(line: string, now: number = Date.now()): NiriParseResult {
     const trimmed = line.trim();
     if (!trimmed) {
-      return null;
+      return { changed: false, fact: null };
     }
 
     try {
@@ -27,16 +32,16 @@ export class NiriParser {
       return this.processEvent(parsed, now);
     } catch {
       // Safely ignore invalid JSON lines
-      return null;
+      return { changed: false, fact: null };
     }
   }
 
   /**
    * Process a parsed Niri event object.
    */
-  public processEvent(event: unknown, now: number = Date.now()): DesktopFact | null {
+  public processEvent(event: unknown, now: number = Date.now()): NiriParseResult {
     if (typeof event !== "object" || event === null) {
-      return null;
+      return { changed: false, fact: null };
     }
 
     // 1. WindowsChanged (initial state or full list)
@@ -63,7 +68,7 @@ export class NiriParser {
       if (this.focusedWindowId === win.id) {
         return this.checkAndEmitCurrentFocus(now);
       }
-      return null;
+      return { changed: false, fact: null };
     }
 
     // 3. WindowClosed
@@ -75,7 +80,7 @@ export class NiriParser {
         this.focusedWindowId = null;
         return this.checkAndEmitCurrentFocus(now);
       }
-      return null;
+      return { changed: false, fact: null };
     }
 
     // 4. WindowFocusChanged
@@ -86,26 +91,34 @@ export class NiriParser {
     }
 
     // Unrecognized or other event (WorkspaceActivated, etc.) - ignored safely
-    return null;
+    return { changed: false, fact: null };
   }
 
-  private checkAndEmitCurrentFocus(now: number): DesktopFact | null {
+  private checkAndEmitCurrentFocus(now: number): NiriParseResult {
     if (this.focusedWindowId === null) {
       if (this.lastEmittedFact === null) {
-        return null;
+        return { changed: false, fact: null };
       }
       this.lastEmittedFact = null;
-      return null;
+      return { changed: true, fact: null };
     }
 
     const currentWin = this.windows.get(this.focusedWindowId);
     if (!currentWin) {
-      return null;
+      if (this.lastEmittedFact === null) {
+        return { changed: false, fact: null };
+      }
+      this.lastEmittedFact = null;
+      return { changed: true, fact: null };
     }
 
     const appId = currentWin.app_id?.trim();
     if (!appId) {
-      return null;
+      if (this.lastEmittedFact === null) {
+        return { changed: false, fact: null };
+      }
+      this.lastEmittedFact = null;
+      return { changed: true, fact: null };
     }
 
     const fact: DesktopFact = {
@@ -125,11 +138,11 @@ export class NiriParser {
       this.lastEmittedFact.windowId === fact.windowId &&
       this.lastEmittedFact.workspaceId === fact.workspaceId
     ) {
-      return null;
+      return { changed: false, fact: this.lastEmittedFact };
     }
 
     this.lastEmittedFact = fact;
-    return fact;
+    return { changed: true, fact };
   }
 
   public getFocusedWindow(): NiriWindow | null {

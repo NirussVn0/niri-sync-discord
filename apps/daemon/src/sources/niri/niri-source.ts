@@ -105,9 +105,9 @@ export class NiriSource extends EventEmitter {
         this.setHealth("connected", "Streaming Niri events");
       }
 
-      const fact = this.parser.processLine(line);
-      if (fact !== null) {
-        this.emit("fact", fact);
+      const result = this.parser.processLine(line);
+      if (result.changed) {
+        this.emit("fact", result.fact);
       }
     });
 
@@ -119,6 +119,8 @@ export class NiriSource extends EventEmitter {
     });
 
     this.childProcess.on("close", (code, signal) => {
+      this.parser.reset();
+      this.emit("fact", null);
       if (!this.running) return;
       this.setHealth(
         "reconnecting",

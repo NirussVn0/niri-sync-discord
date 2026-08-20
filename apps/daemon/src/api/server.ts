@@ -177,6 +177,11 @@ export class ApiServer {
           else if (ext === ".svg") contentType = "image/svg+xml";
           else if (ext === ".json") contentType = "application/json";
           else if (ext === ".png") contentType = "image/png";
+          else if (ext === ".webp") contentType = "image/webp";
+          else if (ext === ".ico") contentType = "image/x-icon";
+          else if (ext === ".woff2") contentType = "font/woff2";
+          else if (ext === ".woff") contentType = "font/woff";
+          else if (ext === ".ttf") contentType = "font/ttf";
 
           return c.body(content, 200, { "Content-Type": contentType });
         }

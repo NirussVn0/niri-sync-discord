@@ -206,6 +206,11 @@ export class PresenceStore extends EventEmitter {
         this.emit("event", event);
       } else {
         this.presence = null;
+        const event: DaemonEvent = {
+          type: "presence.resolved",
+          payload: null,
+        };
+        this.emit("event", event);
       }
     }
   }

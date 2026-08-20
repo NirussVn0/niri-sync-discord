@@ -38,7 +38,7 @@ describe("LrclibClient", () => {
     expect(callCount).toBe(1); // no extra fetch call
   });
 
-  it("handles 404 response without crashing and caches negative result", async () => {
+  it("handles 404 response without crashing, attempts /search fallback and caches negative result", async () => {
     let callCount = 0;
     const mockFetch = async () => {
       callCount++;
@@ -56,10 +56,12 @@ describe("LrclibClient", () => {
 
     const res1 = await client.getLyrics(query, mockFetch);
     expect(res1).toBeNull();
-    expect(callCount).toBe(1);
+    // 1 call for /get (404) + 1 call for /search fallback (404)
+    expect(callCount).toBe(2);
 
     const res2 = await client.getLyrics(query, mockFetch);
     expect(res2).toBeNull();
-    expect(callCount).toBe(1);
+    // Second lookup hits cache, no additional fetch
+    expect(callCount).toBe(2);
   });
 });
