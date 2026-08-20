@@ -4,3 +4,5 @@ export * from "./candidate-builder.js";
 export * from "./resolver.js";
 export * from "./lyrics-parser.js";
 export * from "./scene-resolver.js";
+export * from "./template-engine.js";
+export * from "./default-templates.js";
