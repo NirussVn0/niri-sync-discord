@@ -1,13 +1,21 @@
 import { useState, useEffect } from "react";
 import { MediaFact } from "@presenced/contracts";
-import { Music, Play, Pause, Disc } from "lucide-react";
+import { Music, Play, Pause, Disc, SkipBack, SkipForward } from "lucide-react";
 import { formatTimeMs } from "../utils/time-format.js";
 
 interface MusicCardProps {
   media: MediaFact | null | undefined;
+  onPlayPause?: () => void;
+  onNext?: () => void;
+  onPrevious?: () => void;
 }
 
-export const MusicCard = ({ media }: MusicCardProps) => {
+export const MusicCard = ({
+  media,
+  onPlayPause,
+  onNext,
+  onPrevious,
+}: MusicCardProps) => {
   const [currentPositionMs, setCurrentPositionMs] = useState(0);
 
   useEffect(() => {
@@ -51,22 +59,50 @@ export const MusicCard = ({ media }: MusicCardProps) => {
 
   return (
     <div className="p-3.5 rounded-xl bg-surface border border-surface-border space-y-3 select-none">
-      {/* Top Header: Player & Playback State */}
+      {/* Top Header: Player & Playback State & Controls */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5 text-xs font-semibold text-indigo-400">
           <Disc className={`w-3.5 h-3.5 ${isPlaying ? "animate-spin" : ""}`} style={{ animationDuration: "4s" }} />
           <span className="capitalize">{media.player}</span>
         </div>
-        <span
-          className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded font-mono ${
-            isPlaying
-              ? "bg-emerald-500/10 text-emerald-300 border border-emerald-500/20"
-              : "bg-slate-800 text-slate-400"
-          }`}
-        >
-          {isPlaying ? <Play className="w-2.5 h-2.5 fill-current" /> : <Pause className="w-2.5 h-2.5 fill-current" />}
-          {media.playback}
-        </span>
+
+        <div className="flex items-center gap-1">
+          {onPrevious && (
+            <button
+              type="button"
+              onClick={onPrevious}
+              className="p-1 rounded-md hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+              title="Previous Track"
+            >
+              <SkipBack className="w-3 h-3" />
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={onPlayPause}
+            className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded font-mono transition-colors ${
+              isPlaying
+                ? "bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 hover:bg-emerald-500/20"
+                : "bg-slate-800 text-slate-400 hover:text-white"
+            }`}
+            title={isPlaying ? "Pause Playback" : "Resume Playback"}
+          >
+            {isPlaying ? <Play className="w-2.5 h-2.5 fill-current" /> : <Pause className="w-2.5 h-2.5 fill-current" />}
+            {media.playback}
+          </button>
+
+          {onNext && (
+            <button
+              type="button"
+              onClick={onNext}
+              className="p-1 rounded-md hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+              title="Next Track"
+            >
+              <SkipForward className="w-3 h-3" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Main Track Details */}

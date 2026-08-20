@@ -74,6 +74,30 @@ export class MprisSource extends EventEmitter {
     this.setHealth("disconnected", "MPRIS source stopped");
   }
 
+  public playPause(): void {
+    try {
+      this.spawnFn(this.binaryPath, ["play-pause"]);
+    } catch {
+      // ignore
+    }
+  }
+
+  public next(): void {
+    try {
+      this.spawnFn(this.binaryPath, ["next"]);
+    } catch {
+      // ignore
+    }
+  }
+
+  public previous(): void {
+    try {
+      this.spawnFn(this.binaryPath, ["previous"]);
+    } catch {
+      // ignore
+    }
+  }
+
   private connect(): void {
     if (!this.running) return;
 

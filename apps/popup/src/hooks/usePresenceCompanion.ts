@@ -5,6 +5,7 @@ import {
   DaemonEventSchema,
   ActivityCategory,
   SceneType,
+  CountdownCategory,
 } from "@presenced/contracts";
 
 const API_HTTP_URL = "http://127.0.0.1:4242/api";
@@ -28,6 +29,17 @@ export interface UsePresenceCompanionReturn {
   resumePomodoro: () => Promise<void>;
   stopPomodoro: () => Promise<void>;
   skipPomodoro: () => Promise<void>;
+  playPauseMedia: () => Promise<void>;
+  nextMedia: () => Promise<void>;
+  previousMedia: () => Promise<void>;
+  addCountdown: (item: {
+    title: string;
+    targetDate: string;
+    category?: CountdownCategory;
+    showOnDiscord?: boolean;
+  }) => Promise<void>;
+  deleteCountdown: (id: string) => Promise<void>;
+  toggleCountdown: (id: string) => Promise<void>;
   refresh: () => Promise<void>;
 }
 
@@ -259,6 +271,66 @@ export function usePresenceCompanion(): UsePresenceCompanionReturn {
     }
   };
 
+  const playPauseMedia = async () => {
+    try {
+      await fetch(`${API_HTTP_URL}/media/play-pause`, { method: "POST" });
+    } catch {
+      // ignore
+    }
+  };
+
+  const nextMedia = async () => {
+    try {
+      await fetch(`${API_HTTP_URL}/media/next`, { method: "POST" });
+    } catch {
+      // ignore
+    }
+  };
+
+  const previousMedia = async () => {
+    try {
+      await fetch(`${API_HTTP_URL}/media/previous`, { method: "POST" });
+    } catch {
+      // ignore
+    }
+  };
+
+  const addCountdown = async (item: {
+    title: string;
+    targetDate: string;
+    category?: CountdownCategory;
+    showOnDiscord?: boolean;
+  }) => {
+    try {
+      await fetch(`${API_HTTP_URL}/countdowns`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(item),
+      });
+      await fetchInitialState();
+    } catch {
+      // ignore
+    }
+  };
+
+  const deleteCountdown = async (id: string) => {
+    try {
+      await fetch(`${API_HTTP_URL}/countdowns/${id}`, { method: "DELETE" });
+      await fetchInitialState();
+    } catch {
+      // ignore
+    }
+  };
+
+  const toggleCountdown = async (id: string) => {
+    try {
+      await fetch(`${API_HTTP_URL}/countdowns/${id}/toggle`, { method: "POST" });
+      await fetchInitialState();
+    } catch {
+      // ignore
+    }
+  };
+
   return {
     snapshot,
     wsConnected,
@@ -272,6 +344,12 @@ export function usePresenceCompanion(): UsePresenceCompanionReturn {
     resumePomodoro,
     stopPomodoro,
     skipPomodoro,
+    playPauseMedia,
+    nextMedia,
+    previousMedia,
+    addCountdown,
+    deleteCountdown,
+    toggleCountdown,
     refresh: fetchInitialState,
   };
 }

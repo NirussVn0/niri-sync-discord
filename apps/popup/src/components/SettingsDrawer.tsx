@@ -8,6 +8,7 @@ import {
   Layers,
   Activity,
   Plus,
+  Trash2,
 } from "lucide-react";
 
 interface SettingsDrawerProps {
@@ -21,6 +22,8 @@ interface SettingsDrawerProps {
     category: CountdownCategory;
     showOnDiscord: boolean;
   }) => void;
+  onDeleteCountdown?: (id: string) => void;
+  onToggleCountdown?: (id: string) => void;
 }
 
 type SettingsTab = "scenes" | "countdowns" | "integrations" | "privacy";
@@ -31,6 +34,8 @@ export const SettingsDrawer = ({
   snapshot,
   onSetPrivacyMode,
   onAddCountdown,
+  onDeleteCountdown,
+  onToggleCountdown,
 }: SettingsDrawerProps) => {
   const [activeTab, setActiveTab] = useState<SettingsTab>("scenes");
   const [newTitle, setNewTitle] = useState("");
@@ -207,9 +212,32 @@ export const SettingsDrawer = ({
                     <div className="font-bold text-white">{snapshot.countdown.activeCountdown.title}</div>
                     <div className="text-[10px] text-slate-400">{snapshot.countdown.totalFormatted}</div>
                   </div>
-                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 font-mono">
-                    Active
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {onToggleCountdown ? (
+                      <button
+                        type="button"
+                        onClick={() => onToggleCountdown(snapshot.countdown!.activeCountdown!.id)}
+                        className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/20 font-mono transition-colors"
+                        title="Click to toggle countdown status"
+                      >
+                        Active
+                      </button>
+                    ) : (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 font-mono">
+                        Active
+                      </span>
+                    )}
+                    {onDeleteCountdown && (
+                      <button
+                        type="button"
+                        onClick={() => onDeleteCountdown(snapshot.countdown!.activeCountdown!.id)}
+                        className="p-1 rounded hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 transition-colors"
+                        title="Delete this countdown"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             )}

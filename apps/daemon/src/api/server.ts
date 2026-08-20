@@ -15,6 +15,8 @@ import {
 import { PresenceStore } from "../state/presence-store.js";
 import { PomodoroEngine } from "../sources/pomodoro/pomodoro-engine.js";
 import { CountdownEngine } from "../sources/countdown/countdown-engine.js";
+import { MprisSource } from "../sources/mpris/mpris-source.js";
+import { TokenManager } from "../auth/token-manager.js";
 
 export interface ApiServerOptions {
   port?: number;
@@ -23,6 +25,8 @@ export interface ApiServerOptions {
   store: PresenceStore;
   pomodoroEngine?: PomodoroEngine;
   countdownEngine?: CountdownEngine;
+  mprisSource?: MprisSource;
+  tokenManager?: TokenManager;
 }
 
 export class ApiServer {
@@ -31,6 +35,8 @@ export class ApiServer {
   private readonly store: PresenceStore;
   private readonly pomodoroEngine: PomodoroEngine | null = null;
   private readonly countdownEngine: CountdownEngine | null = null;
+  private readonly mprisSource: MprisSource | null = null;
+  private readonly tokenManager: TokenManager | null = null;
   private readonly port: number;
   private readonly host: string;
   private readonly staticDir: string | null;
@@ -41,6 +47,8 @@ export class ApiServer {
     this.store = options.store;
     this.pomodoroEngine = options.pomodoroEngine ?? null;
     this.countdownEngine = options.countdownEngine ?? null;
+    this.mprisSource = options.mprisSource ?? null;
+    this.tokenManager = options.tokenManager ?? null;
     this.port = options.port ?? 4242;
     this.host = options.host ?? "127.0.0.1";
     this.staticDir = options.staticDir ?? ApiServer.findDefaultStaticDir();
@@ -241,6 +249,22 @@ export class ApiServer {
       const id = c.req.param("id");
       this.countdownEngine?.toggleCountdown(id);
       return c.json(this.store.getSnapshot());
+    });
+
+    // Media playback controls
+    this.app.post("/api/media/play-pause", (c) => {
+      this.mprisSource?.playPause();
+      return c.json({ success: true });
+    });
+
+    this.app.post("/api/media/next", (c) => {
+      this.mprisSource?.next();
+      return c.json({ success: true });
+    });
+
+    this.app.post("/api/media/previous", (c) => {
+      this.mprisSource?.previous();
+      return c.json({ success: true });
     });
 
     // Rules endpoints

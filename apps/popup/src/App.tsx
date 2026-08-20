@@ -23,6 +23,12 @@ export function App() {
     resumePomodoro,
     stopPomodoro,
     skipPomodoro,
+    playPauseMedia,
+    nextMedia,
+    previousMedia,
+    addCountdown,
+    deleteCountdown,
+    toggleCountdown,
   } = usePresenceCompanion();
 
   const [showDiscordPreview, setShowDiscordPreview] = useState(false);
@@ -82,12 +88,20 @@ export function App() {
             )}
 
             {/* 4. If media is playing -> show MusicCard + FocusedLyricsView */}
-            {snapshot?.media && activeSceneType !== "pomodoro" && activeSceneType !== "countdown" && activeSceneType !== "system" && (
-              <div className="space-y-2.5">
-                <MusicCard media={snapshot.media} />
-                <FocusedLyricsView lyrics={snapshot.lyrics} media={snapshot.media} />
-              </div>
-            )}
+            {snapshot?.media &&
+              activeSceneType !== "pomodoro" &&
+              activeSceneType !== "countdown" &&
+              activeSceneType !== "system" && (
+                <div className="space-y-2.5">
+                  <MusicCard
+                    media={snapshot.media}
+                    onPlayPause={playPauseMedia}
+                    onNext={nextMedia}
+                    onPrevious={previousMedia}
+                  />
+                  <FocusedLyricsView lyrics={snapshot.lyrics} media={snapshot.media} />
+                </div>
+              )}
 
             {/* 5. Desktop Context Card (shown if no media or if activeScene is auto/focus) */}
             {(!snapshot?.media || activeSceneType === "focus" || activeSceneType === "auto") &&
@@ -181,6 +195,9 @@ export function App() {
         onClose={() => setShowSettingsDrawer(false)}
         snapshot={snapshot}
         onSetPrivacyMode={(enabled) => setPrivacyMode(enabled)}
+        onAddCountdown={(item) => addCountdown(item)}
+        onDeleteCountdown={(id) => deleteCountdown(id)}
+        onToggleCountdown={(id) => toggleCountdown(id)}
       />
     </div>
   );
