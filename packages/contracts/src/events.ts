@@ -3,6 +3,7 @@ import { PresenceSnapshotSchema, ResolvedPresenceSchema } from "./presence.js";
 import { IntegrationHealthSchema } from "./health.js";
 import { DesktopFactSchema, MediaFactSchema } from "./facts.js";
 import { ManualOverrideSchema } from "./rules.js";
+import { LyricsPayloadSchema } from "./lyrics.js";
 
 export const DaemonEventSchema = z.discriminatedUnion("type", [
   z.object({
@@ -32,6 +33,10 @@ export const DaemonEventSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("privacy.changed"),
     payload: z.object({ enabled: z.boolean() }),
+  }),
+  z.object({
+    type: z.literal("lyrics.changed"),
+    payload: LyricsPayloadSchema.nullable(),
   }),
 ]);
 export type DaemonEvent = z.infer<typeof DaemonEventSchema>;

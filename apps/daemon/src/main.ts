@@ -1,6 +1,7 @@
 import { PresenceStore } from "./state/presence-store.js";
 import { NiriSource } from "./sources/niri/niri-source.js";
 import { MprisSource } from "./sources/mpris/mpris-source.js";
+import { LyricsManager } from "./lyrics/lyrics-manager.js";
 import { DiscordRpcClient } from "./outputs/discord/discord-client.js";
 import { DiscordScheduler } from "./outputs/discord/discord-scheduler.js";
 import { ApiServer } from "./api/server.js";
@@ -13,6 +14,7 @@ async function bootstrap() {
   const store = new PresenceStore();
   const niriSource = new NiriSource();
   const mprisSource = new MprisSource();
+  const lyricsManager = new LyricsManager(store);
   const discordClient = new DiscordRpcClient({
     ...(discordClientId ? { clientId: discordClientId } : {}),
   });
@@ -34,6 +36,9 @@ async function bootstrap() {
   mprisSource.on("health", (health) => {
     store.setHealth(health);
   });
+
+  // Start lyrics manager
+  lyricsManager.start();
 
   // Wire Discord client health into presence store
   discordClient.on("health", (health) => {
