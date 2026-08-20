@@ -1,3 +1,5 @@
+import * as fs from "node:fs";
+import * as path from "node:path";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { WebSocketServer, WebSocket } from "ws";
@@ -15,6 +17,7 @@ import { PresenceStore } from "../state/presence-store.js";
 export interface ApiServerOptions {
   port?: number;
   host?: string;
+  staticDir?: string;
   store: PresenceStore;
 }
 
@@ -24,6 +27,7 @@ export class ApiServer {
   private readonly store: PresenceStore;
   private readonly port: number;
   private readonly host: string;
+  private readonly staticDir: string | null;
   private readonly app: Hono;
   private unsubscribeStore: (() => void) | null = null;
 
@@ -31,9 +35,24 @@ export class ApiServer {
     this.store = options.store;
     this.port = options.port ?? 4242;
     this.host = options.host ?? "127.0.0.1";
+    this.staticDir = options.staticDir ?? ApiServer.findDefaultStaticDir();
     this.app = new Hono();
 
     this.setupRoutes();
+  }
+
+  private static findDefaultStaticDir(): string | null {
+    const candidates = [
+      path.resolve(process.cwd(), "apps/web/dist"),
+      path.resolve(process.cwd(), "../web/dist"),
+      path.resolve(process.cwd(), "dist/web"),
+    ];
+    for (const cand of candidates) {
+      if (fs.existsSync(cand) && fs.existsSync(path.join(cand, "index.html"))) {
+        return cand;
+      }
+    }
+    return null;
   }
 
   private setupRoutes(): void {
@@ -136,6 +155,34 @@ export class ApiServer {
         return c.json({ error: "Invalid JSON" }, 400);
       }
     });
+
+    // Static web dashboard assets
+    if (this.staticDir) {
+      const staticDir = this.staticDir;
+      this.app.get("/*", (c) => {
+        const reqPath = c.req.path;
+        if (reqPath.startsWith("/api")) {
+          return c.text("Not Found", 404);
+        }
+        let filePath = path.join(staticDir, reqPath === "/" ? "index.html" : reqPath);
+        if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
+          filePath = path.join(staticDir, "index.html");
+        }
+        if (fs.existsSync(filePath)) {
+          const content = fs.readFileSync(filePath);
+          const ext = path.extname(filePath).toLowerCase();
+          let contentType = "text/html";
+          if (ext === ".js") contentType = "application/javascript";
+          else if (ext === ".css") contentType = "text/css";
+          else if (ext === ".svg") contentType = "image/svg+xml";
+          else if (ext === ".json") contentType = "application/json";
+          else if (ext === ".png") contentType = "image/png";
+
+          return c.body(content, 200, { "Content-Type": contentType });
+        }
+        return c.text("presenced dashboard not built", 404);
+      });
+    }
   }
 
   public async start(): Promise<void> {

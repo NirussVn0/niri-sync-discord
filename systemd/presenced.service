@@ -1,0 +1,20 @@
+[Unit]
+Description=presenced - Linux Desktop Presence Engine for Niri + Discord
+Documentation=https://github.com/NirussVn0/niri-sync-discord
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/node %h/.local/share/presenced/daemon/dist/cli.js
+Restart=on-failure
+RestartSec=3s
+TimeoutStopSec=5s
+Environment=NODE_ENV=production
+Environment=PORT=4242
+Environment=HOST=127.0.0.1
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=graphical-session.target

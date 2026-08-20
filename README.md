@@ -1,73 +1,146 @@
-# presenced
+# presenced (Niri Sync Discord)
 
 A local-first Linux presence daemon + web control center written in TypeScript.
 
-`presenced` observes local desktop/media context, resolves it into one stable activity, optionally synchronizes lyrics, and publishes only the selected activity to Discord Rich Presence. The web UI is the control plane; the daemon is the runtime.
+`presenced` observes local desktop and media context from **Niri + MPRIS**, resolves it into one stable activity through a deterministic presence engine, enriches music with synchronized lyrics from **LRCLIB**, exposes transparent state and rules via a dark-first local web dashboard, and publishes safe, rate-controlled activity to **Discord Rich Presence**.
 
-## Product principles
+---
 
-1. **Local first**: desktop context never needs to leave the machine except explicit provider/RPC requests.
-2. **Event driven**: consume Niri/MPRIS events; do not poll the desktop every second.
-3. **Deterministic core**: activity resolution is rules + state machine, not an LLM.
-4. **Preserve user state**: never overwrite Discord Custom Status. Persist our own settings, manual overrides, caches, and last published activity.
-5. **Lyrics are progressive enhancement**: presence still works when lyrics are missing or a provider is offline.
-6. **Web UI is a live control surface**: it must show what the daemon sees, why an activity won, and what Discord is receiving.
-7. **Privacy by default**: raw window titles are private unless a rule explicitly exposes sanitized text.
+## Key Features
 
-## Chosen stack
+- **Event-Driven Architecture**: Consumes Niri's event stream (`niri msg --json event-stream`) and MPRIS playback events via `playerctl` without CPU-heavy polling loops.
+- **Deterministic Resolution**: Evaluates candidate activities based on user-configurable priority weights (`Manual (100) > Privacy (95) > Gaming (90) > Music (80) > Recording (75) > Coding (60) > Video (50) > Browser (30) > Terminal (25) > Generic (10) > Idle (0)`).
+- **Synchronized Lyrics Engine**: Integrates with LRCLIB, parses LRC timestamp formats (`[mm:ss.xx]`, `[mm:ss.xxx]`, multi-tag lines), maintains monotonic playback clock anchoring, and provides $O(\log n)$ binary-search active lyric line matching.
+- **Discord Local RPC**: Direct IPC socket connection (`$XDG_RUNTIME_DIR/discord-ipc-*`) using `SET_ACTIVITY` with duplicate suppression, rate coalescing, and auto-reconnect backoff.
+- **Web Control Center**: Vite + React "Now" screen featuring live presence cards with "Why this won" resolver reasoning, Discord RPC output preview, monotonic playback progress bar, scrolling synchronized lyrics view, and per-app rules editor.
+- **Privacy by Default**: Automatic secret/token redaction, length capping (128 chars), sensitive password manager masking, and instant Privacy Mode toggle.
+- **Local Persistence**: Built-in SQLite persistence (`~/.config/presenced/presenced.db`) for priority weights, per-app mappings, manual overrides, and privacy state.
 
-- TypeScript everywhere
-- Node.js LTS runtime for the daemon
-- pnpm workspace
-- Hono local HTTP/WebSocket API
-- React + Vite for the web control center
-- shadcn/ui as component source, not as a generic dashboard template
-- TanStack Query for server state
-- Zod for runtime contracts
-- Vitest + Playwright
-- SQLite for persistent state/cache
-- Niri JSON event stream for desktop context
-- MPRIS through `playerctl` for MVP; adapter boundary allows native D-Bus later
-- LRCLIB as primary synced-lyrics provider
-- Discord local RPC `SET_ACTIVITY`; no selfbot/user-token automation
+---
 
-## Target repository shape
+## Quick Start
+
+### Prerequisites
+- Linux OS with Niri compositor (`niri`)
+- Node.js LTS (v20+ or v22+)
+- `playerctl` for MPRIS media observation
+- `pnpm` (v9+)
+
+### Installation & Build
+
+```bash
+# Clone repository
+git clone https://github.com/NirussVn0/niri-sync-discord.git
+cd niri-sync-discord
+
+# Install dependencies and build all packages
+pnpm install
+pnpm build
+```
+
+### Running the Daemon
+
+```bash
+# Start presenced daemon (listens on http://127.0.0.1:4242)
+pnpm --filter @presenced/daemon start
+
+# Or run the CLI diagnostic tool
+node apps/daemon/dist/cli.js --diagnostics
+```
+
+### Running the Web Dashboard (Development)
+
+```bash
+pnpm --filter @presenced/web dev
+```
+
+Open `http://localhost:5173` (or `http://127.0.0.1:4242` when running the bundled production daemon).
+
+---
+
+## CLI Options & Environment Variables
+
+### Command Line Options
+
+```text
+presenced [OPTIONS]
+
+OPTIONS:
+  -h, --help                  Print help information
+  -v, --version               Print version information
+  -d, --diagnostics           Run system diagnostic checks and print report
+  -p, --port <PORT>           HTTP/WS API port (default: 4242 or $PORT)
+      --host <HOST>           HTTP/WS host to bind (default: 127.0.0.1 or $HOST)
+      --db-path <PATH>        Custom path to SQLite database
+      --discord-client-id <ID> Custom Discord Application Client ID
+```
+
+### Environment Variables
+
+| Variable | Description | Default |
+| :--- | :--- | :--- |
+| `PORT` | Local HTTP/WebSocket server port | `4242` |
+| `HOST` | Loopback address to bind | `127.0.0.1` |
+| `DB_PATH` | SQLite database file path | `~/.config/presenced/presenced.db` |
+| `DISCORD_CLIENT_ID` | Discord Application Client ID | `1214041725514194954` |
+
+---
+
+## Systemd User Service Setup
+
+To run `presenced` automatically with your desktop session:
+
+1. Copy the systemd service file:
+   ```bash
+   mkdir -p ~/.config/systemd/user
+   cp systemd/presenced.service ~/.config/systemd/user/
+   ```
+
+2. Reload systemd user daemon and enable the service:
+   ```bash
+   systemctl --user daemon-reload
+   systemctl --user enable --now presenced.service
+   ```
+
+3. Check logs and status:
+   ```bash
+   systemctl --user status presenced.service
+   journalctl --user -u presenced.service -f
+   ```
+
+---
+
+## Monorepo Architecture
 
 ```text
 presenced/
-├─ apps/
-│  ├─ daemon/
-│  │  └─ src/
-│  │     ├─ sources/
-│  │     │  ├─ niri/
-│  │     │  └─ mpris/
-│  │     ├─ outputs/discord/
-│  │     ├─ lyrics/
-│  │     ├─ state/
-│  │     ├─ api/
-│  │     └─ main.ts
-│  └─ web/
-│     └─ src/
-├─ packages/
-│  ├─ contracts/
-│  └─ core/
-├─ docs/
-├─ .agents/
-│  ├─ rules/
-│  ├─ skills/
-│  └─ agents/
-├─ AGENTS.md
-└─ pnpm-workspace.yaml
+├── apps/
+│   ├── daemon/          # Backend engine, sources (Niri, MPRIS), Discord RPC, LRCLIB, SQLite, Hono API
+│   └── web/             # React + Tailwind + Vite Web Control Center
+├── packages/
+│   ├── contracts/       # Shared TypeScript types and Zod schemas (facts, presence, lyrics, rules)
+│   └── core/            # Deterministic presence resolver, categories, sanitizer, and LRC parser
+├── systemd/             # Systemd user service unit configuration
+└── docs/                # Architectural, privacy, and UX specifications
 ```
 
-Do not split more packages until a boundary has at least two real consumers.
+---
 
-## Read first
+## Verification & Testing
 
-1. `AGENTS.md`
-2. `docs/PRODUCT_SPEC.md`
-3. `docs/ARCHITECTURE.md`
-4. `docs/LYRICS_SYNC.md`
-5. `docs/UI_UX.md`
-6. `docs/SECURITY_PRIVACY.md`
-7. `docs/AGY_START_HERE.md`
+```bash
+# Run unit & integration test suite (Vitest)
+pnpm test
+
+# Run strict TypeScript typecheck across monorepo
+pnpm -r typecheck
+
+# Full production build
+pnpm -r build
+```
+
+---
+
+## License
+
+MIT © [NirussVn0](https://github.com/NirussVn0)
