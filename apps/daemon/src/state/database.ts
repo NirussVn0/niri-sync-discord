@@ -2,7 +2,13 @@ import { DatabaseSync } from "node:sqlite";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
-import { PresenceRules, ManualOverride, DEFAULT_PRIORITIES, LyricsPayload } from "@presenced/contracts";
+import {
+  PresenceRules,
+  ManualOverride,
+  DEFAULT_PRIORITIES,
+  LyricsPayload,
+  CountdownItem,
+} from "@presenced/contracts";
 
 export interface DatabaseOptions {
   dbPath?: string;
@@ -52,6 +58,18 @@ export class DatabaseManager {
         track_key TEXT PRIMARY KEY,
         payload TEXT,
         expires_at INTEGER NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS countdowns (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        target_date TEXT NOT NULL,
+        category TEXT NOT NULL,
+        icon TEXT,
+        enabled INTEGER NOT NULL DEFAULT 1,
+        show_on_discord INTEGER NOT NULL DEFAULT 0,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
       );
     `);
   }
@@ -166,6 +184,55 @@ export class DatabaseManager {
     } catch {
       // ignore
     }
+  }
+
+  public getCountdowns(): CountdownItem[] {
+    try {
+      const rows = this.db.prepare("SELECT * FROM countdowns ORDER BY target_date ASC").all() as any[];
+      return rows.map((r) => ({
+        id: r.id,
+        title: r.title,
+        targetDate: r.target_date,
+        category: r.category,
+        icon: r.icon || undefined,
+        enabled: Boolean(r.enabled),
+        showOnDiscord: Boolean(r.show_on_discord),
+        createdAt: r.created_at,
+        updatedAt: r.updated_at,
+      }));
+    } catch {
+      return [];
+    }
+  }
+
+  public saveCountdown(item: CountdownItem): void {
+    const stmt = this.db.prepare(`
+      INSERT INTO countdowns (id, title, target_date, category, icon, enabled, show_on_discord, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        title = excluded.title,
+        target_date = excluded.target_date,
+        category = excluded.category,
+        icon = excluded.icon,
+        enabled = excluded.enabled,
+        show_on_discord = excluded.show_on_discord,
+        updated_at = excluded.updated_at
+    `);
+    stmt.run(
+      item.id,
+      item.title,
+      item.targetDate,
+      item.category,
+      item.icon || null,
+      item.enabled ? 1 : 0,
+      item.showOnDiscord ? 1 : 0,
+      item.createdAt,
+      item.updatedAt
+    );
+  }
+
+  public deleteCountdown(id: string): void {
+    this.db.prepare("DELETE FROM countdowns WHERE id = ?").run(id);
   }
 
   public close(): void {

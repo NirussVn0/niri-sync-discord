@@ -6,6 +6,10 @@ import { LrclibClient } from "./lyrics/lrclib-client.js";
 import { LyricsManager } from "./lyrics/lyrics-manager.js";
 import { DiscordRpcClient } from "./outputs/discord/discord-client.js";
 import { DiscordScheduler } from "./outputs/discord/discord-scheduler.js";
+import { PomodoroEngine } from "./sources/pomodoro/pomodoro-engine.js";
+import { CountdownEngine } from "./sources/countdown/countdown-engine.js";
+import { SystemMetricsReader } from "./sources/system/system-metrics-reader.js";
+import { TokenManager } from "./auth/token-manager.js";
 import { ApiServer } from "./api/server.js";
 
 async function bootstrap() {
@@ -13,6 +17,7 @@ async function bootstrap() {
   const host = process.env.HOST || "127.0.0.1";
   const discordClientId = process.env.DISCORD_CLIENT_ID;
   const dbPath = process.env.DB_PATH;
+  const enableAuth = process.env.PRESENCED_AUTH === "true";
 
   const database = new DatabaseManager({
     ...(dbPath ? { dbPath } : {}),
@@ -22,11 +27,24 @@ async function bootstrap() {
   const mprisSource = new MprisSource();
   const lrclibClient = new LrclibClient({ database });
   const lyricsManager = new LyricsManager(store, lrclibClient);
+  const pomodoroEngine = new PomodoroEngine();
+  const countdownEngine = new CountdownEngine(database);
+  const systemMetricsReader = new SystemMetricsReader();
+  const tokenManager = new TokenManager({ enableAuth });
+
   const discordClient = new DiscordRpcClient({
     ...(discordClientId ? { clientId: discordClientId } : {}),
   });
   const discordScheduler = new DiscordScheduler(discordClient);
-  const apiServer = new ApiServer({ port, host, store });
+  const apiServer = new ApiServer({
+    port,
+    host,
+    store,
+    pomodoroEngine,
+    countdownEngine,
+    mprisSource,
+    tokenManager,
+  });
 
   // Wire Niri events into presence store
   niriSource.on("fact", (fact) => {
@@ -43,6 +61,23 @@ async function bootstrap() {
   mprisSource.on("health", (health) => {
     store.setHealth(health);
   });
+
+  // Wire Pomodoro state into presence store
+  pomodoroEngine.on("fact", (fact) => {
+    store.setPomodoro(fact);
+  });
+
+  // Wire Countdown state into presence store
+  countdownEngine.on("fact", (fact) => {
+    store.setCountdown(fact);
+  });
+  store.setCountdown(countdownEngine.getFact());
+
+  // Periodic System Metrics reader (every 5 seconds)
+  store.setSystem(systemMetricsReader.read());
+  const systemInterval = setInterval(() => {
+    store.setSystem(systemMetricsReader.read());
+  }, 5000);
 
   // Start lyrics manager
   lyricsManager.start();
@@ -74,6 +109,10 @@ async function bootstrap() {
 
   const shutdown = async () => {
     console.log(`[daemon] Shutting down presenced...`);
+    clearInterval(systemInterval);
+    pomodoroEngine.destroy();
+    countdownEngine.destroy();
+    tokenManager.destroy();
     await discordScheduler.clear();
     await new Promise((resolve) => setTimeout(resolve, 50));
     discordClient.stop();

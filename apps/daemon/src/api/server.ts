@@ -13,18 +13,30 @@ import {
   DaemonEvent,
 } from "@presenced/contracts";
 import { PresenceStore } from "../state/presence-store.js";
+import { PomodoroEngine } from "../sources/pomodoro/pomodoro-engine.js";
+import { CountdownEngine } from "../sources/countdown/countdown-engine.js";
+import { MprisSource } from "../sources/mpris/mpris-source.js";
+import { TokenManager } from "../auth/token-manager.js";
 
 export interface ApiServerOptions {
   port?: number;
   host?: string;
   staticDir?: string;
   store: PresenceStore;
+  pomodoroEngine?: PomodoroEngine;
+  countdownEngine?: CountdownEngine;
+  mprisSource?: MprisSource;
+  tokenManager?: TokenManager;
 }
 
 export class ApiServer {
   private server: HttpServer | null = null;
   private wss: WebSocketServer | null = null;
   private readonly store: PresenceStore;
+  private readonly pomodoroEngine: PomodoroEngine | null = null;
+  private readonly countdownEngine: CountdownEngine | null = null;
+  private readonly mprisSource: MprisSource | null = null;
+  private readonly tokenManager: TokenManager | null = null;
   private readonly port: number;
   private readonly host: string;
   private readonly staticDir: string | null;
@@ -33,6 +45,10 @@ export class ApiServer {
 
   constructor(options: ApiServerOptions) {
     this.store = options.store;
+    this.pomodoroEngine = options.pomodoroEngine ?? null;
+    this.countdownEngine = options.countdownEngine ?? null;
+    this.mprisSource = options.mprisSource ?? null;
+    this.tokenManager = options.tokenManager ?? null;
     this.port = options.port ?? 4242;
     this.host = options.host ?? "127.0.0.1";
     this.staticDir = options.staticDir ?? ApiServer.findDefaultStaticDir();
@@ -135,6 +151,120 @@ export class ApiServer {
       } catch {
         return c.json({ error: "Invalid JSON" }, 400);
       }
+    });
+
+    // Scene endpoints
+    this.app.get("/api/scene", (c) => {
+      const snapshot = this.store.getSnapshot();
+      return c.json({
+        activeScene: snapshot.scene,
+        sceneType: this.store.getSceneType(),
+      });
+    });
+
+    this.app.post("/api/scene", async (c) => {
+      try {
+        const body = await c.req.json();
+        const sceneType = body.sceneType;
+        if (!sceneType || typeof sceneType !== "string") {
+          return c.json({ error: "Invalid sceneType" }, 400);
+        }
+        this.store.setScene(sceneType as any);
+        return c.json(this.store.getSnapshot());
+      } catch {
+        return c.json({ error: "Invalid JSON" }, 400);
+      }
+    });
+
+    // Pomodoro endpoints
+    this.app.post("/api/pomodoro/start", async (c) => {
+      try {
+        const body = await c.req.json();
+        if (this.pomodoroEngine) {
+          this.pomodoroEngine.start(body.taskName, body.durationMinutes);
+        }
+        return c.json(this.store.getSnapshot());
+      } catch {
+        return c.json({ error: "Invalid JSON" }, 400);
+      }
+    });
+
+    this.app.post("/api/pomodoro/pause", (c) => {
+      this.pomodoroEngine?.pause();
+      return c.json(this.store.getSnapshot());
+    });
+
+    this.app.post("/api/pomodoro/resume", (c) => {
+      this.pomodoroEngine?.resume();
+      return c.json(this.store.getSnapshot());
+    });
+
+    this.app.post("/api/pomodoro/stop", (c) => {
+      this.pomodoroEngine?.stop();
+      return c.json(this.store.getSnapshot());
+    });
+
+    this.app.post("/api/pomodoro/skip", (c) => {
+      this.pomodoroEngine?.skip();
+      return c.json(this.store.getSnapshot());
+    });
+
+    // Countdown endpoints
+    this.app.get("/api/countdowns", (c) => {
+      if (!this.countdownEngine) {
+        return c.json({ countdowns: [], activeFact: null });
+      }
+      return c.json({
+        activeFact: this.countdownEngine.getFact(),
+      });
+    });
+
+    this.app.post("/api/countdowns", async (c) => {
+      try {
+        const body = await c.req.json();
+        if (this.countdownEngine) {
+          const item = this.countdownEngine.addCountdown({
+            title: body.title,
+            targetDate: body.targetDate,
+            category: body.category ?? "personal",
+            icon: body.icon,
+            enabled: body.enabled ?? true,
+            showOnDiscord: body.showOnDiscord ?? false,
+          });
+          return c.json({ item, snapshot: this.store.getSnapshot() });
+        }
+        return c.json(this.store.getSnapshot());
+      } catch {
+        return c.json({ error: "Invalid JSON" }, 400);
+      }
+    });
+
+    this.app.delete("/api/countdowns/:id", (c) => {
+      const id = c.req.param("id");
+      this.countdownEngine?.removeCountdown(id);
+      return c.json(this.store.getSnapshot());
+    });
+
+    this.app.post("/api/countdowns/:id/toggle", (c) => {
+      const id = c.req.param("id");
+      this.countdownEngine?.toggleCountdown(id);
+      return c.json(this.store.getSnapshot());
+    });
+
+    // Media playback controls
+    this.app.post("/api/media/play-pause", (c) => {
+      this.mprisSource?.playPause();
+      return c.json({ success: true });
+    });
+
+    this.app.post("/api/media/next", (c) => {
+      this.mprisSource?.next();
+      return c.json({ success: true });
+    });
+
+    this.app.post("/api/media/previous", (c) => {
+      this.mprisSource?.previous();
+      return c.json({ success: true });
     });
 
     // Rules endpoints

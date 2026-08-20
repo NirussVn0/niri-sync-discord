@@ -121,6 +121,15 @@ export class NiriParser {
       return { changed: true, fact: null };
     }
 
+    // Protect presence context when popup window/layer surface receives focus
+    if (
+      appId === "io.niruss.niri-sync-discord" ||
+      appId === "niri-sync-discord" ||
+      appId === "presenced-popup"
+    ) {
+      return { changed: false, fact: this.lastEmittedFact };
+    }
+
     const fact: DesktopFact = {
       kind: "desktop",
       appId,

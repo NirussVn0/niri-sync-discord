@@ -2,6 +2,11 @@ import { z } from "zod";
 import { ActivityCategorySchema, ManualOverrideSchema } from "./rules.js";
 import { DesktopFactSchema, MediaFactSchema } from "./facts.js";
 import { IntegrationHealthSchema } from "./health.js";
+import { LyricsPayloadSchema } from "./lyrics.js";
+import { PomodoroFactSchema } from "./pomodoro.js";
+import { CountdownFactSchema } from "./countdowns.js";
+import { SystemFactSchema } from "./system.js";
+import { SceneStateSchema } from "./scenes.js";
 
 export const PresencePrivacySchema = z.enum(["safe", "sanitized", "private"]);
 export type PresencePrivacy = z.infer<typeof PresencePrivacySchema>;
@@ -20,6 +25,10 @@ export const ActivityTimestampsSchema = z.object({
 });
 export type ActivityTimestamps = z.infer<typeof ActivityTimestampsSchema>;
 
+function numberOrZero() {
+  return z.number().default(0);
+}
+
 export const ActivityCandidateSchema = z.object({
   id: z.string(),
   category: ActivityCategorySchema,
@@ -34,10 +43,6 @@ export const ActivityCandidateSchema = z.object({
   rawConfidence: z.number().min(0).max(1).default(1),
 });
 export type ActivityCandidate = z.infer<typeof ActivityCandidateSchema>;
-
-function numberOrZero() {
-  return z.number().default(0);
-}
 
 export const ResolvedPresenceSchema = z.object({
   revision: z.number(),
@@ -54,14 +59,16 @@ export const ResolvedPresenceSchema = z.object({
 });
 export type ResolvedPresence = z.infer<typeof ResolvedPresenceSchema>;
 
-import { LyricsPayloadSchema } from "./lyrics.js";
-
 export const PresenceSnapshotSchema = z.object({
   presence: ResolvedPresenceSchema.nullable(),
   candidates: z.array(ActivityCandidateSchema),
   desktop: DesktopFactSchema.nullable(),
   media: MediaFactSchema.nullable(),
   lyrics: LyricsPayloadSchema.nullable().optional(),
+  pomodoro: PomodoroFactSchema.nullable().optional(),
+  countdown: CountdownFactSchema.nullable().optional(),
+  system: SystemFactSchema.nullable().optional(),
+  scene: SceneStateSchema.nullable().optional(),
   health: z.record(z.string(), IntegrationHealthSchema),
   privacyMode: z.boolean(),
   override: ManualOverrideSchema.nullable(),

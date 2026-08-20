@@ -1,5 +1,5 @@
-import { ResolvedPresence } from "@presenced/contracts";
-import { sanitizeText } from "@presenced/core";
+import { ResolvedPresence, RpcTemplate, TemplateVariables } from "@presenced/contracts";
+import { sanitizeText, TemplateEngine } from "@presenced/core";
 import { DiscordActivity } from "./discord-types.js";
 
 function ensureMinLength(text: string | undefined): string | undefined {
@@ -10,11 +10,18 @@ function ensureMinLength(text: string | undefined): string | undefined {
   return trimmed;
 }
 
+const templateEngine = new TemplateEngine();
+
 /**
- * Maps a ResolvedPresence into a safe Discord Rich Presence Activity payload.
+ * Maps a ResolvedPresence into a safe Discord Rich Presence Activity payload,
+ * optionally applying an active RpcTemplate.
  */
 export function mapPresenceToDiscordActivity(
-  presence: ResolvedPresence | null
+  presence: ResolvedPresence | null,
+  options: {
+    template?: RpcTemplate | undefined;
+    variables?: TemplateVariables | undefined;
+  } = {}
 ): DiscordActivity | null {
   if (!presence) {
     return null;
@@ -23,7 +30,13 @@ export function mapPresenceToDiscordActivity(
   let details: string | undefined;
   let state: string | undefined;
 
-  if (presence.category === "music") {
+  if (options.template && options.variables) {
+    const rendered = templateEngine.renderTemplate(options.template, options.variables);
+    details = sanitizeText(rendered.details, { maxLength: 128 });
+    if (rendered.state) {
+      state = sanitizeText(rendered.state, { maxLength: 128 });
+    }
+  } else if (presence.category === "music") {
     // Music layout: Details = Song Title, State = Artist (or Album)
     details = sanitizeText(presence.title, { maxLength: 128 });
     if (presence.details) {
@@ -67,9 +80,13 @@ export function mapPresenceToDiscordActivity(
   if (presence.assets) {
     activity.assets = {
       ...(presence.assets.largeImage ? { large_image: presence.assets.largeImage } : {}),
-      ...(presence.assets.largeText ? { large_text: sanitizeText(presence.assets.largeText, { maxLength: 128 }) } : {}),
+      ...(presence.assets.largeText
+        ? { large_text: sanitizeText(presence.assets.largeText, { maxLength: 128 }) }
+        : {}),
       ...(presence.assets.smallImage ? { small_image: presence.assets.smallImage } : {}),
-      ...(presence.assets.smallText ? { small_text: sanitizeText(presence.assets.smallText, { maxLength: 128 }) } : {}),
+      ...(presence.assets.smallText
+        ? { small_text: sanitizeText(presence.assets.smallText, { maxLength: 128 }) }
+        : {}),
     };
   }
 

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { mapPresenceToDiscordActivity } from "../outputs/discord/payload-mapper.js";
-import { ResolvedPresence } from "@presenced/contracts";
+import { ResolvedPresence, RpcTemplate } from "@presenced/contracts";
 
 describe("payload-mapper", () => {
   it("returns null for null presence", () => {
@@ -70,5 +70,40 @@ describe("payload-mapper", () => {
     expect(activity).not.toBeNull();
     expect(activity?.details).toBe("Privacy Mode");
     expect(activity?.state).toBeUndefined();
+  });
+
+  it("applies custom RPC templates when provided", () => {
+    const presence: ResolvedPresence = {
+      revision: 1,
+      candidateId: "custom:1",
+      category: "pomodoro",
+      title: "Focusing",
+      source: "pomodoro",
+      reason: "Pomodoro active",
+      resolvedAt: 1000,
+    };
+
+    const template: RpcTemplate = {
+      id: "custom-tpl",
+      name: "Custom Study",
+      detailsTemplate: "Studying {pomodoro.task}",
+      stateTemplate: "{pomodoro.remaining} left • Session {pomodoro.session}",
+      isBuiltin: false,
+    };
+
+    const activity = mapPresenceToDiscordActivity(presence, {
+      template,
+      variables: {
+        pomodoro: {
+          task: "Linear Algebra",
+          remaining: "18:30",
+          session: "3/4",
+        },
+      },
+    });
+
+    expect(activity).not.toBeNull();
+    expect(activity?.details).toBe("Studying Linear Algebra");
+    expect(activity?.state).toBe("18:30 left • Session 3/4");
   });
 });

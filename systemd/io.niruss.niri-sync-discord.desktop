@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Niri Sync Discord
+Comment=Personal Linux Desktop Companion for Niri & Discord RPC
+Exec=presenced-popup
+Icon=io.niruss.niri-sync-discord
+Terminal=false
+Type=Application
+Categories=Utility;AudioVideo;
+StartupWMClass=io.niruss.niri-sync-discord
+X-KDE-Wayland-Interfaces=org_kde_plasma_surface

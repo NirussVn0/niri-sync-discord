@@ -43,6 +43,36 @@ const CATEGORY_CONFIG: Record<
     text: "text-blue-400",
     icon: <Code className="w-4 h-4 text-blue-400" />,
   },
+  focus: {
+    label: "Focus",
+    bg: "bg-indigo-500/10 border-indigo-500/30",
+    text: "text-indigo-400",
+    icon: <Sparkles className="w-4 h-4 text-indigo-400" />,
+  },
+  pomodoro: {
+    label: "Pomodoro",
+    bg: "bg-emerald-500/10 border-emerald-500/30",
+    text: "text-emerald-400",
+    icon: <Clock className="w-4 h-4 text-emerald-400" />,
+  },
+  countdown: {
+    label: "Countdown",
+    bg: "bg-amber-500/10 border-amber-500/30",
+    text: "text-amber-400",
+    icon: <Clock className="w-4 h-4 text-amber-400" />,
+  },
+  system: {
+    label: "System",
+    bg: "bg-sky-500/10 border-sky-500/30",
+    text: "text-sky-400",
+    icon: <Terminal className="w-4 h-4 text-sky-400" />,
+  },
+  custom: {
+    label: "Custom",
+    bg: "bg-purple-500/10 border-purple-500/30",
+    text: "text-purple-400",
+    icon: <Sparkles className="w-4 h-4 text-purple-400" />,
+  },
   terminal: {
     label: "Terminal",
     bg: "bg-emerald-500/10 border-emerald-500/30",
