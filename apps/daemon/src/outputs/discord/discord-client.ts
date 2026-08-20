@@ -64,9 +64,20 @@ export class DiscordRpcClient extends EventEmitter {
     const runtimeDir = process.env.XDG_RUNTIME_DIR;
     const tempDir = process.env.TMPDIR || "/tmp";
 
-    const searchDirs = [runtimeDir, tempDir, "/tmp"].filter((d): d is string => Boolean(d));
+    const candidateDirs = [
+      runtimeDir,
+      runtimeDir ? path.join(runtimeDir, "app/com.discordapp.Discord") : null,
+      runtimeDir ? path.join(runtimeDir, "app/com.discordapp.DiscordCanary") : null,
+      runtimeDir ? path.join(runtimeDir, "snap.discord") : null,
+      runtimeDir ? path.join(runtimeDir, "snap.discord-canary") : null,
+      tempDir,
+      "/tmp",
+      "/tmp/snap.discord",
+      "/tmp/snap.discord-canary",
+      "/tmp/app/com.discordapp.Discord",
+    ].filter((d): d is string => Boolean(d));
 
-    for (const dir of searchDirs) {
+    for (const dir of candidateDirs) {
       for (let i = 0; i < 10; i++) {
         const candidate = path.join(dir, `discord-ipc-${i}`);
         try {
@@ -96,6 +107,11 @@ export class DiscordRpcClient extends EventEmitter {
       this.reconnectTimer = null;
     }
     if (this.socket) {
+      try {
+        this.socket.end();
+      } catch {
+        // ignore
+      }
       this.socket.destroy();
       this.socket = null;
     }

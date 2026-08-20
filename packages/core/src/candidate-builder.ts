@@ -99,8 +99,13 @@ export function buildMediaCandidate(
 
   let timestamps: { start?: number; end?: number } | undefined;
   if (fact.playback === "playing" && fact.positionAnchorMs !== undefined && fact.durationMs) {
+    const elapsedSinceObserved =
+      fact.anchorMonotonicMs !== undefined
+        ? Math.max(0, performance.now() - fact.anchorMonotonicMs)
+        : 0;
+    const estimatedPosition = Math.min(fact.durationMs, fact.positionAnchorMs + elapsedSinceObserved);
     const now = Date.now();
-    const start = now - fact.positionAnchorMs;
+    const start = now - estimatedPosition;
     const end = start + fact.durationMs;
     timestamps = { start, end };
   }

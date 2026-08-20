@@ -127,6 +127,7 @@ export class MprisSource extends EventEmitter {
     });
 
     this.childProcess.on("close", (code, signal) => {
+      this.emit("fact", null);
       if (!this.running) return;
       this.setHealth(
         "reconnecting",

@@ -12,7 +12,7 @@ export const DaemonEventSchema = z.discriminatedUnion("type", [
   }),
   z.object({
     type: z.literal("presence.resolved"),
-    payload: ResolvedPresenceSchema,
+    payload: ResolvedPresenceSchema.nullable(),
   }),
   z.object({
     type: z.literal("source.health.changed"),

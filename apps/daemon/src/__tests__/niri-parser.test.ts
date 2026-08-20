@@ -30,11 +30,12 @@ describe("NiriParser", () => {
       },
     };
 
-    const fact = parser.processEvent(event, 1000);
-    expect(fact).not.toBeNull();
-    expect(fact?.appId).toBe("code");
-    expect(fact?.windowId).toBe(2);
-    expect(fact?.rawTitle).toBe("main.ts - niri-sync-discord");
+    const res = parser.processEvent(event, 1000);
+    expect(res.changed).toBe(true);
+    expect(res.fact).not.toBeNull();
+    expect(res.fact?.appId).toBe("code");
+    expect(res.fact?.windowId).toBe(2);
+    expect(res.fact?.rawTitle).toBe("main.ts - niri-sync-discord");
   });
 
   it("emits new fact when WindowFocusChanged occurs", () => {
@@ -49,31 +50,33 @@ describe("NiriParser", () => {
     }, 1000);
 
     // Switch focus to window 2
-    const fact = parser.processEvent({
+    const res = parser.processEvent({
       WindowFocusChanged: {
         id: 2,
       },
     }, 1050);
 
-    expect(fact).not.toBeNull();
-    expect(fact?.appId).toBe("code");
-    expect(fact?.windowId).toBe(2);
+    expect(res.changed).toBe(true);
+    expect(res.fact).not.toBeNull();
+    expect(res.fact?.appId).toBe("code");
+    expect(res.fact?.windowId).toBe(2);
   });
 
-  it("returns null when focus is cleared", () => {
+  it("returns changed=true and fact=null when focus is cleared", () => {
     parser.processEvent({
       WindowsChanged: {
         windows: [{ id: 1, title: "term", app_id: "Alacritty", is_focused: true }],
       },
     }, 1000);
 
-    const fact = parser.processEvent({
+    const res = parser.processEvent({
       WindowFocusChanged: {
         id: null,
       },
     }, 1050);
 
-    expect(fact).toBeNull();
+    expect(res.changed).toBe(true);
+    expect(res.fact).toBeNull();
   });
 
   it("safely ignores unrecognized event types", () => {
@@ -83,13 +86,14 @@ describe("NiriParser", () => {
       },
     };
 
-    const fact = parser.processEvent(unknownEvent, 1000);
-    expect(fact).toBeNull();
+    const res = parser.processEvent(unknownEvent, 1000);
+    expect(res.changed).toBe(false);
+    expect(res.fact).toBeNull();
   });
 
   it("handles malformed JSON lines gracefully", () => {
-    expect(parser.processLine("")).toBeNull();
-    expect(parser.processLine("not-json")).toBeNull();
-    expect(parser.processLine("{\"broken\":")).toBeNull();
+    expect(parser.processLine("").changed).toBe(false);
+    expect(parser.processLine("not-json").changed).toBe(false);
+    expect(parser.processLine("{\"broken\":").changed).toBe(false);
   });
 });

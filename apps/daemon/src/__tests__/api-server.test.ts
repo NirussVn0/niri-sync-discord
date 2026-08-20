@@ -89,7 +89,7 @@ describe("API & WebSocket Server", () => {
     await new Promise((resolve) => setTimeout(resolve, 80));
     const presenceEvents = receivedEvents.filter((e) => e.type === "presence.resolved");
     expect(presenceEvents.length).toBe(1);
-    expect(presenceEvents[0]?.payload.category).toBe("coding");
+    expect(presenceEvents[0]?.payload?.category).toBe("coding");
 
     ws.close();
   });

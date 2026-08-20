@@ -2,6 +2,7 @@ import { DatabaseManager } from "./state/database.js";
 import { PresenceStore } from "./state/presence-store.js";
 import { NiriSource } from "./sources/niri/niri-source.js";
 import { MprisSource } from "./sources/mpris/mpris-source.js";
+import { LrclibClient } from "./lyrics/lrclib-client.js";
 import { LyricsManager } from "./lyrics/lyrics-manager.js";
 import { DiscordRpcClient } from "./outputs/discord/discord-client.js";
 import { DiscordScheduler } from "./outputs/discord/discord-scheduler.js";
@@ -19,7 +20,8 @@ async function bootstrap() {
   const store = new PresenceStore({ database });
   const niriSource = new NiriSource();
   const mprisSource = new MprisSource();
-  const lyricsManager = new LyricsManager(store);
+  const lrclibClient = new LrclibClient({ database });
+  const lyricsManager = new LyricsManager(store, lrclibClient);
   const discordClient = new DiscordRpcClient({
     ...(discordClientId ? { clientId: discordClientId } : {}),
   });
@@ -73,11 +75,13 @@ async function bootstrap() {
   const shutdown = async () => {
     console.log(`[daemon] Shutting down presenced...`);
     await discordScheduler.clear();
+    await new Promise((resolve) => setTimeout(resolve, 50));
     discordClient.stop();
     niriSource.stop();
     mprisSource.stop();
     await apiServer.stop();
     store.stop();
+    database.close();
     process.exit(0);
   };
 
