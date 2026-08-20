@@ -7,6 +7,7 @@ import { LyricsView } from "./components/LyricsView.js";
 import { DiscordPreviewCard } from "./components/DiscordPreviewCard.js";
 import { IntegrationsHealthRow } from "./components/IntegrationsHealthRow.js";
 import { ManualOverrideModal } from "./components/ManualOverrideModal.js";
+import { RulesSettingsModal } from "./components/RulesSettingsModal.js";
 import { AlertCircle } from "lucide-react";
 
 export function App() {
@@ -17,10 +18,13 @@ export function App() {
     setPrivacyMode,
     setOverride,
     clearOverride,
+    getRules,
+    updateRules,
     refresh,
   } = usePresenceState();
 
   const [isOverrideModalOpen, setIsOverrideModalOpen] = useState(false);
+  const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-background text-slate-100 flex flex-col font-sans">
@@ -29,6 +33,7 @@ export function App() {
         privacyMode={snapshot?.privacyMode ?? false}
         onTogglePrivacy={setPrivacyMode}
         onRefresh={refresh}
+        onOpenRulesModal={() => setIsRulesModalOpen(true)}
       />
 
       <main className="flex-1 max-w-6xl w-full mx-auto px-6 py-8 space-y-8">
@@ -89,6 +94,14 @@ export function App() {
         isOpen={isOverrideModalOpen}
         onClose={() => setIsOverrideModalOpen(false)}
         onSubmit={setOverride}
+      />
+
+      {/* Rules & Priorities Modal */}
+      <RulesSettingsModal
+        isOpen={isRulesModalOpen}
+        onClose={() => setIsRulesModalOpen(false)}
+        onGetRules={getRules}
+        onSaveRules={updateRules}
       />
     </div>
   );

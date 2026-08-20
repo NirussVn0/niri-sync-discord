@@ -1,10 +1,11 @@
-import { Shield, ShieldAlert, Radio, RefreshCw } from "lucide-react";
+import { Shield, ShieldAlert, Radio, RefreshCw, Sliders } from "lucide-react";
 
 interface HeaderProps {
   wsConnected: boolean;
   privacyMode: boolean;
   onTogglePrivacy: (enabled: boolean) => void;
   onRefresh: () => void;
+  onOpenRulesModal?: () => void;
 }
 
 export const Header = ({
@@ -12,6 +13,7 @@ export const Header = ({
   privacyMode,
   onTogglePrivacy,
   onRefresh,
+  onOpenRulesModal,
 }: HeaderProps) => {
   return (
     <header className="border-b border-surface-border bg-surface/50 backdrop-blur-md sticky top-0 z-30 px-6 py-4">
@@ -52,6 +54,19 @@ export const Header = ({
           >
             <RefreshCw className="w-4 h-4" />
           </button>
+
+          {/* Rules & Priorities Modal */}
+          {onOpenRulesModal && (
+            <button
+              type="button"
+              onClick={onOpenRulesModal}
+              title="Configure Priority Rules & App Overrides"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-surface border border-surface-border text-slate-300 hover:bg-surface-hover transition-colors"
+            >
+              <Sliders className="w-3.5 h-3.5 text-indigo-400" />
+              Rules & Priorities
+            </button>
+          )}
 
           {/* Privacy Mode Quick Action */}
           <button
