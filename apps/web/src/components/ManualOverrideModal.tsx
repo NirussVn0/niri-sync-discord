@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { ActivityCategory } from "@presenced/contracts";
 import { X, Sparkles } from "lucide-react";
 
@@ -42,6 +42,16 @@ export const ManualOverrideModal = ({
   const [details, setDetails] = useState("Do Not Disturb");
   const [durationSeconds, setDurationSeconds] = useState(0);
 
+  // Close on Escape key
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const handleSubmit = (e: FormEvent) => {
@@ -58,7 +68,12 @@ export const ManualOverrideModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-150">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="override-modal-title"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-150"
+    >
       <div className="bg-surface border border-surface-border rounded-2xl p-6 w-full max-w-md shadow-2xl relative">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
@@ -66,13 +81,16 @@ export const ManualOverrideModal = ({
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white">Set Manual Override</h3>
+              <h3 id="override-modal-title" className="text-base font-bold text-white">
+                Set Manual Override
+              </h3>
               <p className="text-xs text-slate-400">Overrides automatic desktop detection</p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
+            aria-label="Close dialog"
             className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
           >
             <X className="w-4 h-4" />
@@ -90,7 +108,7 @@ export const ManualOverrideModal = ({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Studying, Gaming, Recording"
-              className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm text-white focus:border-sky-500 focus:outline-none"
+              className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm text-white focus:border-indigo-500 focus:outline-none"
             />
           </div>
 
@@ -101,7 +119,7 @@ export const ManualOverrideModal = ({
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value as ActivityCategory)}
-              className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm text-white focus:border-sky-500 focus:outline-none"
+              className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm text-white focus:border-indigo-500 focus:outline-none"
             >
               {CATEGORIES.map((cat) => (
                 <option key={cat.value} value={cat.value}>
@@ -120,7 +138,7 @@ export const ManualOverrideModal = ({
               value={details}
               onChange={(e) => setDetails(e.target.value)}
               placeholder="e.g. Working on presenced"
-              className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm text-white focus:border-sky-500 focus:outline-none"
+              className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm text-white focus:border-indigo-500 focus:outline-none"
             />
           </div>
 
@@ -131,7 +149,7 @@ export const ManualOverrideModal = ({
             <select
               value={durationSeconds}
               onChange={(e) => setDurationSeconds(Number(e.target.value))}
-              className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm text-white focus:border-sky-500 focus:outline-none"
+              className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm text-white focus:border-indigo-500 focus:outline-none"
             >
               {DURATIONS.map((dur) => (
                 <option key={dur.seconds} value={dur.seconds}>

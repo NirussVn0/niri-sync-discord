@@ -4,6 +4,7 @@ import { Layers, Disc3, MessageSquare, Mic2 } from "lucide-react";
 
 interface IntegrationsHealthRowProps {
   health: Record<string, IntegrationHealth>;
+  onViewDetails?: () => void;
 }
 
 interface IntegrationCardDef {
@@ -45,7 +46,7 @@ const INTEGRATIONS: IntegrationCardDef[] = [
   },
 ];
 
-const STATUS_CONFIG: Record<
+export const STATUS_CONFIG: Record<
   SourceHealth,
   { label: string; dot: string; text: string; bg: string }
 > = {
@@ -79,14 +80,37 @@ const STATUS_CONFIG: Record<
     text: "text-rose-400",
     bg: "bg-rose-500/10 border-rose-500/20",
   },
+  "permission-required": {
+    label: "Permission Required",
+    dot: "bg-amber-500",
+    text: "text-amber-400",
+    bg: "bg-amber-500/15 border-amber-500/30",
+  },
+  "provider-rate-limited": {
+    label: "Rate Limited",
+    dot: "bg-amber-400",
+    text: "text-amber-300",
+    bg: "bg-amber-500/15 border-amber-500/30",
+  },
 };
 
-export const IntegrationsHealthRow = ({ health }: IntegrationsHealthRowProps) => {
+export const IntegrationsHealthRow = ({ health, onViewDetails }: IntegrationsHealthRowProps) => {
   return (
     <div className="space-y-3">
-      <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 px-1">
-        Integration Status
-      </h3>
+      <div className="flex items-center justify-between px-1">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+          Integration Status
+        </h3>
+        {onViewDetails && (
+          <button
+            type="button"
+            onClick={onViewDetails}
+            className="text-xs text-indigo-400 hover:text-indigo-300 font-medium transition-colors"
+          >
+            View Details →
+          </button>
+        )}
+      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {INTEGRATIONS.map((item) => {

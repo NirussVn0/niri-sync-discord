@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { ResolvedPresence, MediaFact } from "@presenced/contracts";
+import { ResolvedPresence, MediaFact, ActivityCandidate } from "@presenced/contracts";
+import { STATUS_CONFIG } from "../components/IntegrationsHealthRow.js";
 
 describe("Web UI components & contracts", () => {
   it("formats presence correctly for Discord and Presence cards", () => {
@@ -52,5 +53,28 @@ describe("Web UI components & contracts", () => {
     expect(mediaFact.playback).toBe("playing");
     expect(mediaFact.title).toBe("Blinding Lights");
     expect(mediaFact.durationMs).toBe(200000);
+  });
+
+  it("maps all 6 integration health statuses properly in STATUS_CONFIG", () => {
+    expect(STATUS_CONFIG.connected.label).toBe("Connected");
+    expect(STATUS_CONFIG.reconnecting.label).toBe("Reconnecting");
+    expect(STATUS_CONFIG.disconnected.label).toBe("Disconnected");
+    expect(STATUS_CONFIG.degraded.label).toBe("Degraded");
+    expect(STATUS_CONFIG.unsupported.label).toBe("Unsupported");
+    expect(STATUS_CONFIG["permission-required"].label).toBe("Permission Required");
+    expect(STATUS_CONFIG["provider-rate-limited"].label).toBe("Rate Limited");
+  });
+
+  it("sorts candidates properly by priority descending", () => {
+    const candidates: ActivityCandidate[] = [
+      { id: "c1", category: "generic", priority: 10, title: "App", source: "niri", privacy: "safe", rawConfidence: 1 },
+      { id: "c2", category: "music", priority: 80, title: "Song", source: "mpris:spotify", privacy: "safe", rawConfidence: 1 },
+      { id: "c3", category: "coding", priority: 60, title: "Code", source: "niri", privacy: "safe", rawConfidence: 1 },
+    ];
+
+    const sorted = [...candidates].sort((a, b) => b.priority - a.priority);
+    expect(sorted[0]?.id).toBe("c2");
+    expect(sorted[1]?.id).toBe("c3");
+    expect(sorted[2]?.id).toBe("c1");
   });
 });

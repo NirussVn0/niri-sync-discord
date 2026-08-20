@@ -50,13 +50,17 @@ export const LyricsView = ({ lyrics, media }: LyricsViewProps) => {
     setActiveIndex(active?.index ?? null);
   }, [lyrics, estimatedPositionMs]);
 
-  // Auto-scroll active line into view smoothly
+  // Container-relative smooth scrolling to prevent browser page jumping
   useEffect(() => {
     if (activeLineRef.current && containerRef.current) {
+      const container = containerRef.current;
+      const activeEl = activeLineRef.current;
+      const targetTop =
+        activeEl.offsetTop - container.offsetTop - container.clientHeight / 2 + activeEl.clientHeight / 2;
       const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      activeLineRef.current.scrollIntoView({
+      container.scrollTo({
+        top: Math.max(0, targetTop),
         behavior: prefersReducedMotion ? "auto" : "smooth",
-        block: "center",
       });
     }
   }, [activeIndex]);
@@ -64,6 +68,8 @@ export const LyricsView = ({ lyrics, media }: LyricsViewProps) => {
   if (!media) {
     return null;
   }
+
+  const confidencePercent = lyrics?.matchConfidence ? Math.round(lyrics.matchConfidence * 100) : 100;
 
   return (
     <div className="bg-surface rounded-2xl border border-surface-border p-6 shadow-xl space-y-4">
@@ -79,11 +85,11 @@ export const LyricsView = ({ lyrics, media }: LyricsViewProps) => {
           {lyrics?.synced && (
             <span className="inline-flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
               <Sparkles className="w-3 h-3" />
-              Synced
+              Synced ({confidencePercent}%)
             </span>
           )}
           {lyrics && (
-            <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">
+            <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700 uppercase">
               {lyrics.provider}
             </span>
           )}
@@ -93,13 +99,15 @@ export const LyricsView = ({ lyrics, media }: LyricsViewProps) => {
       {lyrics?.instrumental ? (
         <div className="py-8 text-center space-y-2">
           <Music2 className="w-8 h-8 text-slate-600 mx-auto" />
-          <p className="text-sm font-medium text-slate-300">Instrumental track</p>
-          <p className="text-xs text-slate-500">No vocals present for this recording.</p>
+          <p className="text-sm font-medium text-slate-300">Instrumental Track</p>
+          <p className="text-xs text-slate-500">No vocals present in LRCLIB record.</p>
         </div>
       ) : lyrics?.synced && lyrics.lines.length > 0 ? (
         <div
           ref={containerRef}
-          className="max-h-72 overflow-y-auto space-y-3 pr-2 scrollbar-thin scrollbar-thumb-slate-800"
+          className="max-h-72 overflow-y-auto space-y-1 pr-2 scrollbar-thin scrollbar-thumb-slate-800"
+          tabIndex={0}
+          aria-label="Synchronized lyrics stream"
         >
           {lyrics.lines.map((line, idx) => {
             const isActive = idx === activeIndex;
@@ -107,10 +115,10 @@ export const LyricsView = ({ lyrics, media }: LyricsViewProps) => {
               <div
                 key={`${line.atMs}-${idx}`}
                 ref={isActive ? activeLineRef : null}
-                className={`transition-all duration-300 px-3 py-2 rounded-xl text-center leading-relaxed select-none ${
+                className={`transition-colors duration-200 px-3 py-2 rounded-lg text-center leading-relaxed select-none text-sm ${
                   isActive
-                    ? "text-base font-bold text-white bg-slate-800/80 shadow-md scale-102 border border-slate-700/50"
-                    : "text-sm text-slate-500 hover:text-slate-400"
+                    ? "font-semibold text-white bg-indigo-950/40 border border-indigo-500/30 shadow-sm"
+                    : "text-slate-500 hover:text-slate-400"
                 }`}
               >
                 {line.text || "♪ ♪ ♪"}

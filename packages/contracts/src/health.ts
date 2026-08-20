@@ -6,6 +6,8 @@ export const SourceHealthSchema = z.enum([
   "disconnected",
   "degraded",
   "unsupported",
+  "permission-required",
+  "provider-rate-limited",
 ]);
 export type SourceHealth = z.infer<typeof SourceHealthSchema>;
 
