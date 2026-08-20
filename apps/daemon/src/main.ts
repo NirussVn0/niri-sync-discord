@@ -1,3 +1,4 @@
+import { DatabaseManager } from "./state/database.js";
 import { PresenceStore } from "./state/presence-store.js";
 import { NiriSource } from "./sources/niri/niri-source.js";
 import { MprisSource } from "./sources/mpris/mpris-source.js";
@@ -10,8 +11,12 @@ async function bootstrap() {
   const port = Number(process.env.PORT || 4242);
   const host = process.env.HOST || "127.0.0.1";
   const discordClientId = process.env.DISCORD_CLIENT_ID;
+  const dbPath = process.env.DB_PATH;
 
-  const store = new PresenceStore();
+  const database = new DatabaseManager({
+    ...(dbPath ? { dbPath } : {}),
+  });
+  const store = new PresenceStore({ database });
   const niriSource = new NiriSource();
   const mprisSource = new MprisSource();
   const lyricsManager = new LyricsManager(store);

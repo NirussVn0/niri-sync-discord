@@ -67,6 +67,14 @@ export function usePresenceState() {
             setSnapshot((prev) =>
               prev ? { ...prev, desktop: daemonEvent.payload, updatedAt: Date.now() } : null
             );
+          } else if (daemonEvent.type === "media.changed") {
+            setSnapshot((prev) =>
+              prev ? { ...prev, media: daemonEvent.payload, updatedAt: Date.now() } : null
+            );
+          } else if (daemonEvent.type === "lyrics.changed") {
+            setSnapshot((prev) =>
+              prev ? { ...prev, lyrics: daemonEvent.payload, updatedAt: Date.now() } : null
+            );
           } else if (daemonEvent.type === "override.changed") {
             setSnapshot((prev) =>
               prev ? { ...prev, override: daemonEvent.payload, updatedAt: Date.now() } : null
@@ -167,6 +175,34 @@ export function usePresenceState() {
     }
   };
 
+  const getRules = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/rules`);
+      if (res.ok) return await res.json();
+    } catch (err) {
+      console.error("Failed to get rules:", err);
+    }
+    return null;
+  };
+
+  const updateRules = async (rules: unknown) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/rules`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(rules),
+      });
+      if (res.ok) {
+        const data: PresenceSnapshot = await res.json();
+        setSnapshot(data);
+        return true;
+      }
+    } catch (err) {
+      console.error("Failed to update rules:", err);
+    }
+    return false;
+  };
+
   return {
     snapshot,
     wsConnected,
@@ -174,6 +210,8 @@ export function usePresenceState() {
     setPrivacyMode,
     setOverride,
     clearOverride,
+    getRules,
+    updateRules,
     refresh: fetchSnapshot,
   };
 }

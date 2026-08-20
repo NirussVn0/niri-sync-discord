@@ -13,9 +13,12 @@ import {
 } from "@presenced/contracts";
 import { resolvePresence, ResolverResult } from "@presenced/core";
 
+import { DatabaseManager } from "./database.js";
+
 export interface PresenceStoreOptions {
   focusDebounceMs?: number;
   initialRules?: PresenceRules;
+  database?: DatabaseManager;
 }
 
 export class PresenceStore extends EventEmitter {
@@ -29,6 +32,7 @@ export class PresenceStore extends EventEmitter {
   private presence: ResolvedPresence | null = null;
   private candidates: ResolverResult["candidates"] = [];
   private revision = 0;
+  private database: DatabaseManager | null = null;
 
   private readonly focusDebounceMs: number;
   private focusDebounceTimer: NodeJS.Timeout | null = null;
@@ -37,11 +41,19 @@ export class PresenceStore extends EventEmitter {
   constructor(options: PresenceStoreOptions = {}) {
     super();
     this.focusDebounceMs = options.focusDebounceMs ?? 150;
-    this.rules = options.initialRules ?? {
-      priorities: { ...DEFAULT_PRIORITIES },
-      appRules: {},
-      privacyMode: false,
-    };
+    this.database = options.database ?? null;
+
+    if (this.database) {
+      this.rules = options.initialRules ?? this.database.getRules();
+      this.privacyMode = this.database.getPrivacyMode();
+      this.manualOverride = this.database.getManualOverride();
+    } else {
+      this.rules = options.initialRules ?? {
+        priorities: { ...DEFAULT_PRIORITIES },
+        appRules: {},
+        privacyMode: false,
+      };
+    }
   }
 
   public getSnapshot(): PresenceSnapshot {
@@ -68,6 +80,7 @@ export class PresenceStore extends EventEmitter {
 
   public setRules(rules: PresenceRules): void {
     this.rules = rules;
+    this.database?.saveRules(rules);
     this.recompute();
   }
 
@@ -132,6 +145,7 @@ export class PresenceStore extends EventEmitter {
 
   public setManualOverride(override: ManualOverride | null): void {
     this.manualOverride = override;
+    this.database?.saveManualOverride(override);
     const event: DaemonEvent = {
       type: "override.changed",
       payload: override,
@@ -142,6 +156,7 @@ export class PresenceStore extends EventEmitter {
 
   public setPrivacyMode(enabled: boolean): void {
     this.privacyMode = enabled;
+    this.database?.savePrivacyMode(enabled);
     const event: DaemonEvent = {
       type: "privacy.changed",
       payload: { enabled },
