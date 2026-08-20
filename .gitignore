@@ -2,6 +2,12 @@
 node_modules/
 .pnpm-store/
 
+# Rust & Tauri
+target/
+src-tauri/target/
+src-tauri/gen/
+release-artifacts/
+
 # Build outputs
 dist/
 build/
