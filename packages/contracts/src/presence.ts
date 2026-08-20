@@ -54,11 +54,14 @@ export const ResolvedPresenceSchema = z.object({
 });
 export type ResolvedPresence = z.infer<typeof ResolvedPresenceSchema>;
 
+import { LyricsPayloadSchema } from "./lyrics.js";
+
 export const PresenceSnapshotSchema = z.object({
   presence: ResolvedPresenceSchema.nullable(),
   candidates: z.array(ActivityCandidateSchema),
   desktop: DesktopFactSchema.nullable(),
   media: MediaFactSchema.nullable(),
+  lyrics: LyricsPayloadSchema.nullable().optional(),
   health: z.record(z.string(), IntegrationHealthSchema),
   privacyMode: z.boolean(),
   override: ManualOverrideSchema.nullable(),

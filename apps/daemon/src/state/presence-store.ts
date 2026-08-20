@@ -2,6 +2,7 @@ import { EventEmitter } from "node:events";
 import {
   DesktopFact,
   MediaFact,
+  LyricsPayload,
   ManualOverride,
   PresenceRules,
   PresenceSnapshot,
@@ -20,6 +21,7 @@ export interface PresenceStoreOptions {
 export class PresenceStore extends EventEmitter {
   private desktop: DesktopFact | null = null;
   private media: MediaFact | null = null;
+  private lyrics: LyricsPayload | null = null;
   private manualOverride: ManualOverride | null = null;
   private privacyMode = false;
   private health: Record<string, IntegrationHealth> = {};
@@ -48,6 +50,7 @@ export class PresenceStore extends EventEmitter {
       candidates: this.candidates,
       desktop: this.desktop,
       media: this.media,
+      lyrics: this.lyrics,
       health: { ...this.health },
       privacyMode: this.privacyMode,
       override: this.manualOverride,
@@ -116,6 +119,15 @@ export class PresenceStore extends EventEmitter {
     };
     this.emit("event", event);
     this.recompute();
+  }
+
+  public setLyrics(lyrics: LyricsPayload | null): void {
+    this.lyrics = lyrics;
+    const event: DaemonEvent = {
+      type: "lyrics.changed",
+      payload: lyrics,
+    };
+    this.emit("event", event);
   }
 
   public setManualOverride(override: ManualOverride | null): void {

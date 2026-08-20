@@ -60,6 +60,9 @@ importers:
       '@presenced/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@presenced/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
