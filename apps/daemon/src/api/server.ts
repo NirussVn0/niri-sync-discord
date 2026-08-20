@@ -13,18 +13,21 @@ import {
   DaemonEvent,
 } from "@presenced/contracts";
 import { PresenceStore } from "../state/presence-store.js";
+import { PomodoroEngine } from "../sources/pomodoro/pomodoro-engine.js";
 
 export interface ApiServerOptions {
   port?: number;
   host?: string;
   staticDir?: string;
   store: PresenceStore;
+  pomodoroEngine?: PomodoroEngine;
 }
 
 export class ApiServer {
   private server: HttpServer | null = null;
   private wss: WebSocketServer | null = null;
   private readonly store: PresenceStore;
+  private readonly pomodoroEngine: PomodoroEngine | null = null;
   private readonly port: number;
   private readonly host: string;
   private readonly staticDir: string | null;
@@ -33,6 +36,7 @@ export class ApiServer {
 
   constructor(options: ApiServerOptions) {
     this.store = options.store;
+    this.pomodoroEngine = options.pomodoroEngine ?? null;
     this.port = options.port ?? 4242;
     this.host = options.host ?? "127.0.0.1";
     this.staticDir = options.staticDir ?? ApiServer.findDefaultStaticDir();
@@ -158,6 +162,39 @@ export class ApiServer {
       } catch {
         return c.json({ error: "Invalid JSON" }, 400);
       }
+    });
+
+    // Pomodoro endpoints
+    this.app.post("/api/pomodoro/start", async (c) => {
+      try {
+        const body = await c.req.json();
+        if (this.pomodoroEngine) {
+          this.pomodoroEngine.start(body.taskName, body.durationMinutes);
+        }
+        return c.json(this.store.getSnapshot());
+      } catch {
+        return c.json({ error: "Invalid JSON" }, 400);
+      }
+    });
+
+    this.app.post("/api/pomodoro/pause", (c) => {
+      this.pomodoroEngine?.pause();
+      return c.json(this.store.getSnapshot());
+    });
+
+    this.app.post("/api/pomodoro/resume", (c) => {
+      this.pomodoroEngine?.resume();
+      return c.json(this.store.getSnapshot());
+    });
+
+    this.app.post("/api/pomodoro/stop", (c) => {
+      this.pomodoroEngine?.stop();
+      return c.json(this.store.getSnapshot());
+    });
+
+    this.app.post("/api/pomodoro/skip", (c) => {
+      this.pomodoroEngine?.skip();
+      return c.json(this.store.getSnapshot());
     });
 
     // Rules endpoints

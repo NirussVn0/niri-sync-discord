@@ -23,6 +23,11 @@ export interface UsePresenceCompanionReturn {
   }) => Promise<void>;
   clearOverride: () => Promise<void>;
   switchScene: (sceneType: SceneType) => Promise<void>;
+  startPomodoro: (taskName?: string, durationMinutes?: number) => Promise<void>;
+  pausePomodoro: () => Promise<void>;
+  resumePomodoro: () => Promise<void>;
+  stopPomodoro: () => Promise<void>;
+  skipPomodoro: () => Promise<void>;
   refresh: () => Promise<void>;
 }
 
@@ -210,6 +215,50 @@ export function usePresenceCompanion(): UsePresenceCompanionReturn {
     }
   };
 
+  const startPomodoro = async (taskName?: string, durationMinutes?: number) => {
+    try {
+      await fetch(`${API_HTTP_URL}/pomodoro/start`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ taskName, durationMinutes }),
+      });
+    } catch {
+      // ignore
+    }
+  };
+
+  const pausePomodoro = async () => {
+    try {
+      await fetch(`${API_HTTP_URL}/pomodoro/pause`, { method: "POST" });
+    } catch {
+      // ignore
+    }
+  };
+
+  const resumePomodoro = async () => {
+    try {
+      await fetch(`${API_HTTP_URL}/pomodoro/resume`, { method: "POST" });
+    } catch {
+      // ignore
+    }
+  };
+
+  const stopPomodoro = async () => {
+    try {
+      await fetch(`${API_HTTP_URL}/pomodoro/stop`, { method: "POST" });
+    } catch {
+      // ignore
+    }
+  };
+
+  const skipPomodoro = async () => {
+    try {
+      await fetch(`${API_HTTP_URL}/pomodoro/skip`, { method: "POST" });
+    } catch {
+      // ignore
+    }
+  };
+
   return {
     snapshot,
     wsConnected,
@@ -218,6 +267,11 @@ export function usePresenceCompanion(): UsePresenceCompanionReturn {
     setOverride,
     clearOverride,
     switchScene,
+    startPomodoro,
+    pausePomodoro,
+    resumePomodoro,
+    stopPomodoro,
+    skipPomodoro,
     refresh: fetchInitialState,
   };
 }
