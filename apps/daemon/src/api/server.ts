@@ -137,6 +137,29 @@ export class ApiServer {
       }
     });
 
+    // Scene endpoints
+    this.app.get("/api/scene", (c) => {
+      const snapshot = this.store.getSnapshot();
+      return c.json({
+        activeScene: snapshot.scene,
+        sceneType: this.store.getSceneType(),
+      });
+    });
+
+    this.app.post("/api/scene", async (c) => {
+      try {
+        const body = await c.req.json();
+        const sceneType = body.sceneType;
+        if (!sceneType || typeof sceneType !== "string") {
+          return c.json({ error: "Invalid sceneType" }, 400);
+        }
+        this.store.setScene(sceneType as any);
+        return c.json(this.store.getSnapshot());
+      } catch {
+        return c.json({ error: "Invalid JSON" }, 400);
+      }
+    });
+
     // Rules endpoints
     this.app.get("/api/rules", (c) => {
       return c.json(this.store.getRules());

@@ -3,6 +3,11 @@ import {
   DesktopFact,
   MediaFact,
   LyricsPayload,
+  PomodoroFact,
+  CountdownFact,
+  SystemFact,
+  SceneState,
+  SceneType,
   ManualOverride,
   PresenceRules,
   PresenceSnapshot,
@@ -11,7 +16,7 @@ import {
   DaemonEvent,
   DEFAULT_PRIORITIES,
 } from "@presenced/contracts";
-import { resolvePresence, ResolverResult } from "@presenced/core";
+import { resolvePresence, ResolverResult, SceneResolver } from "@presenced/core";
 
 import { DatabaseManager } from "./database.js";
 
@@ -25,14 +30,19 @@ export class PresenceStore extends EventEmitter {
   private desktop: DesktopFact | null = null;
   private media: MediaFact | null = null;
   private lyrics: LyricsPayload | null = null;
+  private pomodoro: PomodoroFact | null = null;
+  private countdown: CountdownFact | null = null;
+  private system: SystemFact | null = null;
   private manualOverride: ManualOverride | null = null;
   private privacyMode = false;
+  private manualSceneType: SceneType = "auto";
   private health: Record<string, IntegrationHealth> = {};
   private rules: PresenceRules;
   private presence: ResolvedPresence | null = null;
   private candidates: ResolverResult["candidates"] = [];
   private revision = 0;
   private database: DatabaseManager | null = null;
+  private sceneResolver = new SceneResolver();
 
   private readonly focusDebounceMs: number;
   private focusDebounceTimer: NodeJS.Timeout | null = null;
@@ -57,12 +67,35 @@ export class PresenceStore extends EventEmitter {
   }
 
   public getSnapshot(): PresenceSnapshot {
+    const resolvedScene = this.sceneResolver.resolve({
+      manualSceneType: this.manualSceneType,
+      privacyMode: this.privacyMode,
+      override: this.manualOverride,
+      desktop: this.desktop,
+      media: this.media,
+      pomodoro: this.pomodoro,
+      countdown: this.countdown,
+      system: this.system,
+    });
+
+    const sceneState: SceneState = {
+      activeSceneId: resolvedScene.id,
+      activeSceneType: resolvedScene.type,
+      isAuto: resolvedScene.isAuto,
+      scenes: [],
+      updatedAt: Date.now(),
+    };
+
     return {
       presence: this.presence,
       candidates: this.candidates,
       desktop: this.desktop,
       media: this.media,
       lyrics: this.lyrics,
+      pomodoro: this.pomodoro,
+      countdown: this.countdown,
+      system: this.system,
+      scene: sceneState,
       health: { ...this.health },
       privacyMode: this.privacyMode,
       override: this.manualOverride,
@@ -91,6 +124,29 @@ export class PresenceStore extends EventEmitter {
       payload: health,
     };
     this.emit("event", event);
+  }
+
+  public setScene(sceneType: SceneType): void {
+    this.manualSceneType = sceneType;
+    this.recompute();
+  }
+
+  public getSceneType(): SceneType {
+    return this.manualSceneType;
+  }
+
+  public setPomodoro(fact: PomodoroFact | null): void {
+    this.pomodoro = fact;
+    this.recompute();
+  }
+
+  public setCountdown(fact: CountdownFact | null): void {
+    this.countdown = fact;
+    this.recompute();
+  }
+
+  public setSystem(fact: SystemFact | null): void {
+    this.system = fact;
   }
 
   public setDesktop(fact: DesktopFact | null, immediate = false): void {
@@ -184,13 +240,13 @@ export class PresenceStore extends EventEmitter {
     const isDifferent =
       (prev === null && next !== null) ||
       (prev !== null && next === null) ||
-      (prev !== null && next !== null && (
-        prev.candidateId !== next.candidateId ||
-        prev.category !== next.category ||
-        prev.title !== next.title ||
-        prev.details !== next.details ||
-        prev.state !== next.state
-      ));
+      (prev !== null &&
+        next !== null &&
+        (prev.candidateId !== next.candidateId ||
+          prev.category !== next.category ||
+          prev.title !== next.title ||
+          prev.details !== next.details ||
+          prev.state !== next.state));
 
     if (isDifferent) {
       if (next !== null) {
