@@ -290,6 +290,26 @@ export class ApiServer {
       }
     });
 
+    // RVC Rotation config endpoints
+    this.app.get("/api/settings/rvc", (c) => {
+      const config = this.store.getRvcConfig();
+      return c.json(config ?? { enabled: false, tickIntervalSec: 30, entries: [] });
+    });
+
+    this.app.post("/api/settings/rvc", async (c) => {
+      try {
+        const body = await c.req.json();
+        this.store.setRvcConfig({
+          enabled: Boolean(body.enabled),
+          tickIntervalSec: Number(body.tickIntervalSec) || 30,
+          entries: Array.isArray(body.entries) ? body.entries : [],
+        });
+        return c.json({ ok: true });
+      } catch {
+        return c.json({ error: "Invalid JSON" }, 400);
+      }
+    });
+
     this.app.put("/api/rules", async (c) => {
       try {
         const body = await c.req.json();

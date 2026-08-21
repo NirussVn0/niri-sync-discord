@@ -1,0 +1,18 @@
+# Vietnamese wisdom quotes — random pick for Discord RPC rotation
+# One quote per line, lines starting with # are ignored
+
+"Đường đi khó không phải vì ngăn cản bởi núi sông mà vì sự nghiệp con người phải vượt lên chính mình."
+"Hãy sống như thể bạn sẽ chết ngày mai. Hãy học như thể bạn sẽ sống mãi."
+"Thành công không phải là đích đến, mà là hành trình."
+"Không có gì là không thể. Chính từ 'bất khả thi' cũng đã nói 'có thể' mà."
+"Tri thức là sức mạnh duy nhất không ai có thể tước đoạt."
+"Người khôn ngoan không phải là người biết tất cả, mà là người biết mình không biết gì."
+"Cuộc sống giống như lái xe đạp. Để giữ thăng bằng, bạn phải tiếp tục di chuyển."
+"Đừng sợ chậm, chỉ sợ dừng lại."
+"Hạnh phúc không phải là có được tất cả, mà là hài lòng với những gì mình có."
+"Mỗi ngày là một cơ hội mới để trở thành phiên bản tốt hơn của chính mình."
+"Thành công là tổng của những nỗ lực nhỏ lặp đi lặp lại hàng ngày."
+"Con đường ngắn nhất để thất bại là sợ thất bại."
+"Cuộc đời ngắn ngủi, đừng phí thời gian sống theo cách người khác muốn."
+"Kỷ luật là cầu nối giữa mục tiêu và thành tựu."
+"Đọc sách là đi du lịch mà không cần rời khỏi nhà."

@@ -44,6 +44,9 @@ export interface UsePresenceCompanionReturn {
   // Discord config
   getDiscordConfig: () => Promise<{ clientId?: string; socketPath?: string }>;
   saveDiscordConfig: (config: { clientId?: string; socketPath?: string }) => Promise<void>;
+  // RVC Rotation config
+  getRvcConfig: () => Promise<{ enabled: boolean; tickIntervalSec: number; entries: any[] }>;
+  saveRvcConfig: (config: { enabled: boolean; tickIntervalSec: number; entries: any[] }) => Promise<void>;
 }
 
 export function usePresenceCompanion(): UsePresenceCompanionReturn {
@@ -377,6 +380,28 @@ export function usePresenceCompanion(): UsePresenceCompanionReturn {
     }
   };
 
+  const getRvcConfig = async (): Promise<{ enabled: boolean; tickIntervalSec: number; entries: any[] }> => {
+    try {
+      const res = await fetch(`${API_HTTP_URL}/settings/rvc`);
+      if (!res.ok) return { enabled: false, tickIntervalSec: 30, entries: [] };
+      return await res.json();
+    } catch {
+      return { enabled: false, tickIntervalSec: 30, entries: [] };
+    }
+  };
+
+  const saveRvcConfig = async (config: { enabled: boolean; tickIntervalSec: number; entries: any[] }) => {
+    try {
+      await fetch(`${API_HTTP_URL}/settings/rvc`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(config),
+      });
+    } catch {
+      // ignore
+    }
+  };
+
   return {
     snapshot,
     wsConnected,
@@ -399,5 +424,7 @@ export function usePresenceCompanion(): UsePresenceCompanionReturn {
     refresh: fetchInitialState,
     getDiscordConfig,
     saveDiscordConfig,
+    getRvcConfig,
+    saveRvcConfig,
   };
 }

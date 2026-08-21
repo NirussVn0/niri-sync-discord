@@ -258,6 +258,29 @@ export class DatabaseManager {
     stmt.run("discord_config", JSON.stringify(config), Date.now());
   }
 
+  // ── RVC Rotation config (KV store) ────────────────────────────────────
+
+  public getRvcConfig(): { enabled: boolean; tickIntervalSec: number; entries: any[] } | null {
+    try {
+      const row = this.db
+        .prepare("SELECT value FROM kv_store WHERE key = ?")
+        .get("rvc_config") as { value: string } | undefined;
+      if (!row) return null;
+      return JSON.parse(row.value);
+    } catch {
+      return null;
+    }
+  }
+
+  public saveRvcConfig(config: { enabled: boolean; tickIntervalSec: number; entries: any[] }): void {
+    const stmt = this.db.prepare(`
+      INSERT INTO kv_store (key, value, updated_at)
+      VALUES (?, ?, ?)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+    `);
+    stmt.run("rvc_config", JSON.stringify(config), Date.now());
+  }
+
   public close(): void {
     this.db.close();
   }

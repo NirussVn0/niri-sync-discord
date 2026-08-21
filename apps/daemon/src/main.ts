@@ -6,6 +6,7 @@ import { LrclibClient } from "./lyrics/lrclib-client.js";
 import { LyricsManager } from "./lyrics/lyrics-manager.js";
 import { DiscordRpcClient } from "./outputs/discord/discord-client.js";
 import { DiscordScheduler } from "./outputs/discord/discord-scheduler.js";
+import { RvcScheduler } from "./outputs/discord/rvc-scheduler.js";
 import { PomodoroEngine } from "./sources/pomodoro/pomodoro-engine.js";
 import { CountdownEngine } from "./sources/countdown/countdown-engine.js";
 import { SystemMetricsReader } from "./sources/system/system-metrics-reader.js";
@@ -41,6 +42,14 @@ async function bootstrap() {
     ...(dbDiscordConfig.socketPath ? { customSocketPath: dbDiscordConfig.socketPath } : {}),
   });
   const discordScheduler = new DiscordScheduler(discordClient);
+
+  // RVC Rotation scheduler (cycles multiple Discord statuses)
+  const rvcConfig = store.getRvcConfig();
+  const rvcScheduler = new RvcScheduler(discordClient, rvcConfig ?? {
+    enabled: false,
+    tickIntervalSec: 30,
+    entries: [],
+  });
   const apiServer = new ApiServer({
     port,
     host,
@@ -92,10 +101,11 @@ async function bootstrap() {
     store.setHealth(health);
   });
 
-  // Wire resolved presence to Discord output scheduler
+  // Wire resolved presence to Discord output scheduler + RVC rotation
   store.on("event", (event) => {
     if (event.type === "presence.resolved") {
       discordScheduler.updatePresence(event.payload);
+      rvcScheduler.updateRealPresence(event.payload);
     }
   });
 
@@ -112,6 +122,12 @@ async function bootstrap() {
   discordClient.start();
   console.log(`[daemon] Discord Rich Presence output started`);
 
+  // Start RVC rotation if enabled
+  if (rvcConfig?.enabled) {
+    rvcScheduler.start();
+    console.log(`[daemon] RVC rotation started (${rvcConfig.entries.filter((e: any) => e.enabled).length} entries)`);
+  }
+
   const shutdown = async () => {
     console.log(`[daemon] Shutting down presenced...`);
     clearInterval(systemInterval);
@@ -119,6 +135,7 @@ async function bootstrap() {
     countdownEngine.destroy();
     tokenManager.destroy();
     await discordScheduler.clear();
+    await rvcScheduler.clear();
     await new Promise((resolve) => setTimeout(resolve, 50));
     discordClient.stop();
     niriSource.stop();

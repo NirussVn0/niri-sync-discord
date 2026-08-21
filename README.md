@@ -1,4 +1,4 @@
-# Niri Sync Discord (`presenced`)
+# presenced-popup — Niri Wayland × Discord Sync
 
 <div align="center">
 
@@ -9,9 +9,11 @@
 ![Tests](https://img.shields.io/badge/Tests-110%20Passing-10b981?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)
 
-**A local-first Linux desktop companion and presence engine engineered specifically for Niri Wayland workflows.**
+**A local-first Niri Wayland companion that syncs your desktop context, music, lyrics, and focus state to Discord Rich Presence in real-time.**
 
-[Key Features](#-key-features) • [Architecture](#-system-architecture) • [Step-by-Step Build Tutorial](#-step-by-step-build-tutorial) • [Niri Integration](#-niri-wayland-integration) • [Testing](#-testing--quality-gates)
+Niri desktop → presenced daemon → Discord RPC (official / Equicord / Vencord)
+
+[Key Features](#-key-features) • [Architecture](#-system-architecture) • [Build Tutorial](#-step-by-step-build-tutorial) • [Niri Integration](#-niri-wayland-integration) • [Testing](#-testing--quality-gates)
 
 </div>
 
@@ -19,11 +21,13 @@
 
 ## 🌟 Overview
 
-`presenced` transforms your Linux desktop experience by fusing **Niri Wayland context**, **MPRIS media state**, **synchronized lyrics**, **Pomodoro focus cycles**, **personal milestone countdowns**, and **hardware telemetry** into a single, cohesive companion.
+`presenced-popup` is a **Niri Wayland companion** that syncs your desktop context to **Discord Rich Presence** in real-time. It captures what you're doing on Niri — browsing, coding, listening to music, studying with Pomodoro — and publishes it as a polished Discord status.
+
+Works with **official Discord**, **Equicord**, and **Vencord** via the standard Discord IPC socket.
 
 It delivers:
-1. **The Daemon (`apps/daemon`)**: A headless background engine that processes real-time event streams, resolves conflicting desktop activities using deterministic priority weighting, matches synced lyrics, and publishes rate-controlled Discord Rich Presence.
-2. **The Companion Popup (`apps/popup`)**: A vertical floating desktop companion (Tauri v2, React 19, WebKit2GTK) featuring 3-line focused lyrics, interactive media playback buttons, Pomodoro timers, and slide-over settings.
+1. **The Daemon (`apps/daemon`)**: A headless background engine that processes real-time Niri + MPRIS event streams, resolves conflicting desktop activities using deterministic priority weighting, matches synced lyrics, and publishes rate-controlled Discord Rich Presence.
+2. **The Companion Popup (`apps/popup`)**: A floating Tauri v2 desktop companion (React 19, WebKit2GTK) featuring glassmorphic UI, animated audio waveform, 3-line focused lyrics, interactive media controls, Pomodoro timers, and slide-over settings.
 3. **The Web Dashboard (`apps/web`)**: A diagnostic control center for configuring rules, overrides, and integrations.
 
 ---

@@ -125,6 +125,14 @@ export class PresenceStore extends EventEmitter {
     this.database?.saveDiscordConfig(config);
   }
 
+  public getRvcConfig(): { enabled: boolean; tickIntervalSec: number; entries: any[] } | null {
+    return this.database?.getRvcConfig() ?? null;
+  }
+
+  public setRvcConfig(config: { enabled: boolean; tickIntervalSec: number; entries: any[] }): void {
+    this.database?.saveRvcConfig(config);
+  }
+
   public setHealth(health: IntegrationHealth): void {
     this.health[health.source] = health;
     const event: DaemonEvent = {
