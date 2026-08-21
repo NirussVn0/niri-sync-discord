@@ -55,7 +55,7 @@ export function App() {
     <>
       <TutorialOverlay />
 
-      <div className="flex h-screen w-screen p-2 gap-2 select-none font-sans overflow-hidden">
+      <div className="relative h-screen w-screen p-2 select-none font-sans overflow-hidden">
         {/* ═══ Left Side Panel ═══ */}
         <SidePanel side="left" isOpen={leftOpen} onToggle={() => setLeftOpen((p) => !p)}>
           {visibility.system && <SystemWidget system={snapshot?.system} />}
@@ -64,7 +64,7 @@ export function App() {
         </SidePanel>
 
         {/* ═══ Main Widget ═══ */}
-        <div className="flex-1 min-w-0 flex flex-col gap-2">
+        <div className="h-full w-full min-w-0 flex flex-col gap-2">
           {/* Header: Clock + Controls */}
           <motion.div className="glass-strong rounded-niri-xl p-3 flex items-center justify-between" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={springNiri}>
             <PremiumClock userName="Niruss" wsConnected={wsConnected} clockStyle={theme.clockStyle} />
@@ -87,19 +87,19 @@ export function App() {
                   <SettingsPanel visibility={visibility} toggleWidget={toggleWidget} onClose={collapseSettings} snapshot={snapshot} onSetPrivacyMode={setPrivacyMode} onAddCountdown={addCountdown} onDeleteCountdown={deleteCountdown} onToggleCountdown={toggleCountdown} getDiscordConfig={getDiscordConfig} saveDiscordConfig={saveDiscordConfig} getRvcConfig={getRvcConfig} saveRvcConfig={saveRvcConfig} loadTheme={loadTheme} saveTheme={saveTheme} />
                 </motion.div>
               ) : (
-                <motion.div key="main" className="h-full grid gap-2" style={{ gridTemplateColumns: "1fr 1fr", gridTemplateRows: "auto auto" }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={springNiri}>
+                <motion.div key="main" className="h-full min-w-0 grid gap-2" style={{ gridTemplateColumns: "minmax(0, 3fr) minmax(0, 2fr)", gridTemplateRows: "auto auto" }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={springNiri}>
                   {/* Row 1: Music + RVC */}
-                  <div className="relative">
+                  <div className="relative min-w-0 overflow-hidden">
                     {visibility.music && <MusicWidget media={snapshot?.media} onPlayPause={playPauseMedia} onNext={nextMedia} onPrevious={previousMedia} />}
                     {editMode && <EditHandles />}
                   </div>
-                  <div className="relative">
+                  <div className="relative min-w-0 overflow-hidden">
                     <RvcWidget connected={wsConnected} status={snapshot?.presence?.title ?? undefined} clientId="15403406" displayMode={isMusicPlaying ? "music" : "auto"} />
                     {editMode && <EditHandles />}
                   </div>
 
                   {/* Row 2: Primary widget (user's choice) */}
-                  <div className="col-span-2 relative">
+                  <div className="col-span-2 relative min-w-0 overflow-hidden">
                     {visibility.lyrics && <LyricsWidget lyrics={snapshot?.lyrics} media={snapshot?.media} />}
                     {visibility.pomodoro && !visibility.lyrics && <PomodoroWidget pomodoro={snapshot?.pomodoro} onStart={(t) => startPomodoro(t)} onPause={pausePomodoro} onResume={resumePomodoro} onStop={stopPomodoro} onSkip={skipPomodoro} />}
                     {visibility.countdown && !visibility.lyrics && !visibility.pomodoro && <CountdownWidget countdown={snapshot?.countdown} />}

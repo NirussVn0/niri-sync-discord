@@ -15,7 +15,7 @@ fn find_niri_window_id(payload: &[u8], pid: u32) -> Option<u64> {
 }
 
 #[cfg(target_os = "linux")]
-fn center_window_on_niri(window: tauri::WebviewWindow) {
+fn center_window_on_niri() {
     let pid = std::process::id();
     thread::spawn(move || {
         for _ in 0..40 {
@@ -26,11 +26,9 @@ fn center_window_on_niri(window: tauri::WebviewWindow) {
                 if output.status.success() {
                     if let Some(window_id) = find_niri_window_id(&output.stdout, pid) {
                         // Niri exposes the window before WebKit finishes its opening configure.
-                        // Let that settle, enforce dashboard size, then re-center through the
-                        // bounded opening-animation window so late configures cannot win.
+                        // Let that settle, then re-center through the bounded opening-animation
+                        // window so late configures cannot win.
                         thread::sleep(Duration::from_millis(1000));
-                        let _ = window.set_size(tauri::LogicalSize::new(720.0, 420.0));
-                        thread::sleep(Duration::from_millis(200));
                         let window_id = window_id.to_string();
                         let mut centered = false;
                         for _ in 0..8 {
@@ -53,7 +51,7 @@ fn center_window_on_niri(window: tauri::WebviewWindow) {
 }
 
 #[cfg(not(target_os = "linux"))]
-fn center_window_on_niri(_window: tauri::WebviewWindow) {}
+fn center_window_on_niri() {}
 
 #[tauri::command]
 fn minimize_window(window: tauri::WebviewWindow) {
@@ -97,7 +95,7 @@ pub fn run() {
         .setup(|app| {
             let window = app.get_webview_window("main").unwrap();
             window.set_decorations(false)?;
-            center_window_on_niri(window.clone());
+            center_window_on_niri();
             Ok(())
         })
         .run(tauri::generate_context!())

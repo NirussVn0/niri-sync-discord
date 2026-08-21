@@ -14,7 +14,7 @@ export const GlassCard = ({ glowColor, className = "", children }: GlassCardProp
   const style = glowColor ? { borderColor: `${glowColor}25` } : {};
   return (
     <motion.div
-      className={`rounded-niri-lg glass-float p-3 space-y-1.5 select-none ${className}`}
+      className={`min-w-0 overflow-hidden rounded-niri-lg glass-float p-3 space-y-1.5 select-none ${className}`}
       style={style}
       initial={{ opacity: 0, y: 8, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}

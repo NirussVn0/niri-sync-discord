@@ -15,15 +15,24 @@ interface SidePanelProps {
 
 export const SidePanel = ({ side, isOpen, onToggle, children }: SidePanelProps) => {
   const isLeft = side === "left";
+  const panelId = `${side}-side-panel`;
 
   return (
-    <div className={`relative flex-shrink-0 ${isLeft ? "order-first" : "order-last"}`}>
+    <div
+      className={`pointer-events-none absolute inset-y-2 z-30 w-[200px] ${isLeft ? "left-2" : "right-2"}`}
+      data-side-panel={side}
+    >
       {/* Toggle button (always visible) */}
       <motion.button
         type="button"
         onClick={onToggle}
-        className="absolute top-1/2 -translate-y-1/2 z-10 p-1.5 rounded-niri glass-surface text-text-secondary hover:text-text-primary transition-colors"
-        style={{ [isLeft ? "right" : "left"]: "-12px" }}
+        aria-controls={panelId}
+        aria-expanded={isOpen}
+        aria-label={`${isOpen ? "Close" : "Open"} ${side} widgets`}
+        className="pointer-events-auto absolute top-1/2 z-40 -translate-y-1/2 p-1.5 rounded-niri glass-surface text-text-secondary hover:text-text-primary transition-colors"
+        style={isOpen
+          ? { [isLeft ? "right" : "left"]: "-12px" }
+          : { [isLeft ? "left" : "right"]: "0" }}
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
       >
@@ -38,11 +47,11 @@ export const SidePanel = ({ side, isOpen, onToggle, children }: SidePanelProps) 
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            className="glass-strong rounded-niri-xl p-2 space-y-2 overflow-y-auto scrollbar-thin"
-            style={{ width: 200, maxHeight: "100%" }}
-            initial={{ [isLeft ? "x" : "x"]: isLeft ? -200 : 200, opacity: 0 }}
+            id={panelId}
+            className={`pointer-events-auto absolute inset-y-0 w-[200px] glass-strong rounded-niri-xl p-2 space-y-2 overflow-y-auto scrollbar-thin ${isLeft ? "left-0" : "right-0"}`}
+            initial={{ x: isLeft ? -200 : 200, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
-            exit={{ [isLeft ? "x" : "x"]: isLeft ? -200 : 200, opacity: 0 }}
+            exit={{ x: isLeft ? -200 : 200, opacity: 0 }}
             transition={springNiri}
           >
             {children}

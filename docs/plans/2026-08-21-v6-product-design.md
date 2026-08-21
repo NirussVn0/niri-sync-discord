@@ -51,7 +51,8 @@ No scrolling. Everything fits. Period.
 - **Left panel**: Additional widgets (system, connection health, countdown)
 - **Right panel**: Additional widgets (lyrics extended, pomodoro detailed, quote of the day)
 - Side panels **slide in/out** with animation
-- They are **separate glass boxes** that appear next to the main widget
+- They are **separate glass overlay drawers** anchored to the left/right edge
+- They never participate in the main flex/grid sizing, resize the Tauri surface, or move the centered dashboard
 - User can choose which widgets go in which panel via settings
 
 ### Edit Mode (pencil button)
