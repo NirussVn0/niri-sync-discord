@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { SceneType } from "@presenced/contracts";
 import { usePresenceCompanion } from "./hooks/usePresenceCompanion.js";
+import { useAudioAnalysis, analysisToCssVars } from "./hooks/useAudioAnalysis.js";
 import { HeaderWidget } from "./components/HeaderWidget.js";
 import { NaviBar } from "./components/NaviBar.js";
 import { DesktopCard } from "./components/DesktopCard.js";
@@ -45,6 +46,11 @@ export function App() {
   const [activeScreen, setActiveScreen] = useState<ScreenId>("auto");
   const [direction, setDirection] = useState(1);
   const [showSettingsDrawer, setShowSettingsDrawer] = useState(false);
+
+  // Audio analysis for music-reactive animations
+  const isMusicPlaying = snapshot?.media?.playback === "playing";
+  const audioAnalysis = useAudioAnalysis(isMusicPlaying);
+  const audioCssVars = analysisToCssVars(audioAnalysis);
 
   // Sync with daemon scene state
   const daemonScene = snapshot?.scene?.activeSceneType ?? "auto";
@@ -174,12 +180,15 @@ export function App() {
     <div
       className={`relative w-[380px] min-h-[560px] max-h-[660px] bg-background glass-strong rounded-niri-xl p-4 text-text-primary flex flex-col justify-between shadow-glass-lg select-none font-sans overflow-hidden`}
       data-tauri-drag-region
+      style={audioCssVars as React.CSSProperties}
     >
-      {/* ── Ambient glow overlay (scene-colored) ──────────────────────── */}
+      {/* ── Ambient glow overlay (scene-colored + audio-reactive) ──────── */}
       <div
-        className="absolute inset-0 pointer-events-none opacity-30 rounded-niri-xl transition-all duration-700"
+        className="absolute inset-0 pointer-events-none rounded-niri-xl transition-all duration-300"
         style={{
           background: `radial-gradient(ellipse at 50% 0%, ${sceneMeta.glowColor} 0%, transparent 70%)`,
+          opacity: 0.2 + audioAnalysis.volume * 0.3,
+          transform: `scale(${1 + audioAnalysis.bass * 0.02})`,
         }}
       />
 
