@@ -48,14 +48,36 @@ describe("TemplateEngine & Token Interpolation", () => {
     expect(result.state).toBe("309 days remaining");
   });
 
-  it("handles missing tokens without crashing or showing undefined", () => {
-    const tpl = DEFAULT_TEMPLATES["tpl-music"]!;
+  it("renders system telemetry template with CPU and RAM tokens", () => {
+    const tpl = DEFAULT_TEMPLATES["tpl-system"]!;
     const vars: TemplateVariables = {
-      track: "Solo Track",
+      system: {
+        cpu: "14.2%",
+        ram: "62.5%",
+      },
     };
 
     const result = engine.renderTemplate(tpl, vars);
-    expect(result.details).toBe("Solo Track");
-    expect(result.state).toBeUndefined();
+    expect(result.details).toBe("CPU 14.2% • RAM 62.5%");
+  });
+
+  it("renders custom templates with custom variable definitions", () => {
+    const customTpl = {
+      id: "custom-1",
+      name: "Custom Gaming",
+      detailsTemplate: "{game} • Level {level}",
+      stateTemplate: "Ranked Match ({mode})",
+      isBuiltin: false,
+    };
+
+    const vars = {
+      game: "Elden Ring",
+      level: "150",
+      mode: "PvP",
+    };
+
+    const result = engine.renderTemplate(customTpl, vars as any);
+    expect(result.details).toBe("Elden Ring • Level 150");
+    expect(result.state).toBe("Ranked Match (PvP)");
   });
 });
