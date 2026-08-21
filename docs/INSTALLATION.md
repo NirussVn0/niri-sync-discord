@@ -77,7 +77,7 @@ journalctl --user -u presenced.service -f
 
 ## 5. Niri Wayland Popup Integration
 
-The installer writes and validates `~/.config/niri/config.d/85-presenced-popup-niri.kdl` and adds its include to `config.kdl`. This is required because Niri ignores Tauri's client-side `center` request for tiled windows. The installed rule forces the popup into the floating layer at 720×420, where Niri centers it by default.
+The installer writes and validates `~/.config/niri/config.d/85-presenced-popup-niri.kdl` and adds its include to `config.kdl`. This is required because Niri ignores Tauri's client-side `center` request for tiled windows. The rule forces the popup into the floating layer at 720×420; after mapping, Rust resolves the Niri window ID from its PID and invokes `center-window --id` for deterministic placement.
 
 Add only the optional hotkey to your binds file:
 

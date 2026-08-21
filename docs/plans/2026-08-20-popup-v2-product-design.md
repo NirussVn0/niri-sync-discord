@@ -224,7 +224,7 @@ Strict typecheck, passing Vitest suite, native Wayland popup execution, zero reg
 ### 24.1 Architecture & Layer Policy
 - **Shipped Mode (v0.6.0)**: Native Wayland Tauri window plus a validated Niri `open-floating` rule.
 - **Layer**: Niri floating layout, which stays above tiled windows.
-- **Placement**: Centered by Niri when opened, fixed at 720×420.
+- **Placement**: Fixed at 720×420; Rust resolves the mapped Niri window by PID and invokes `center-window --id` after startup.
 - **Runtime Application ID**: `presenced-popup-niri`.
 - **Future Option**: `gtk-layer-shell` remains research only and is not part of the current Rust runtime.
 

@@ -187,7 +187,7 @@ journalctl --user -u presenced.service -f
 
 ## 🖥️ Niri Wayland Integration
 
-`./scripts/install.sh` now installs and validates `~/.config/niri/config.d/85-presenced-popup-niri.kdl`, then includes it from `config.kdl`. The rule forces the real runtime app ID into Niri's floating layer at 720×420; Niri centers newly opened floating windows by default.
+`./scripts/install.sh` installs and validates `~/.config/niri/config.d/85-presenced-popup-niri.kdl`, then includes it from `config.kdl`. The rule forces the real runtime app ID into Niri's floating layer at 720×420. After mapping, the Rust startup code resolves its Niri window ID from the process PID and calls `niri msg action center-window --id …`, making centering deterministic across outputs and workspaces.
 
 Only the optional hotkey needs to be added manually:
 

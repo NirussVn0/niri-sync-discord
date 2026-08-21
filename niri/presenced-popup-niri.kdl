@@ -1,5 +1,5 @@
 // presenced-popup-niri — Niri floating popup rule
-// Installed by scripts/install.sh. Floating windows open centered by default.
+// Installed by scripts/install.sh. Rust startup centers the mapped window via Niri IPC.
 window-rule {
     match app-id="^presenced-popup-niri$"
     open-floating true

@@ -58,7 +58,7 @@ The system is running natively under Wayland with Niri managing active outputs a
 - **Context Protection Rule**: `PresenceStore` and `SceneResolver` must treat the popup's own application ID (`io.niruss.presenced-popup-niri` / layer surface `presenced-popup-niri`) as transparent overlay focus, preserving the last non-empty desktop activity (e.g. `Coding` remains `Coding` rather than degrading to `Idle`).
 
 ### 2.5 Current Shipping Mode
-The current release uses an ordinary native Wayland Tauri window with compositor-enforced popup semantics:
+The current release uses an ordinary native Wayland Tauri window with compositor-enforced popup semantics. After the window maps, Rust resolves its Niri window ID by PID and invokes `center-window --id` for deterministic centering:
 - `app_id: "presenced-popup-niri"`
 - Dimensions: `width: 720px`, `height: 420px`
 - Niri Recommended Rule:

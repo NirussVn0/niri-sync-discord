@@ -19,12 +19,15 @@ describe("Niri popup integration", () => {
   it("installs and validates the compositor rule automatically", () => {
     const installer = rootFile("scripts/install.sh");
     const desktopEntry = rootFile("systemd/io.niruss.presenced-popup-niri.desktop");
+    const rustRuntime = rootFile("apps/popup/src-tauri/src/lib.rs");
     const tauriConfig = JSON.parse(rootFile("apps/popup/src-tauri/tauri.conf.json"));
 
     expect(installer).toContain("niri/presenced-popup-niri.kdl");
     expect(installer).toContain('niri validate -c "$NIRI_CONFIG"');
     expect(desktopEntry).toContain("Exec=presenced-popup-niri");
     expect(desktopEntry).toContain("StartupWMClass=presenced-popup-niri");
+    expect(rustRuntime).toContain('"center-window"');
+    expect(rustRuntime).toContain("find_niri_window_id");
     expect(tauriConfig.app.windows[0].center).toBe(true);
     expect(tauriConfig.app.windows[0].alwaysOnTop).toBe(true);
     expect(tauriConfig.app.windows[0].skipTaskbar).toBe(true);
