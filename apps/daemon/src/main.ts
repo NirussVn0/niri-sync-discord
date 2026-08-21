@@ -87,11 +87,11 @@ async function bootstrap() {
   });
   store.setCountdown(countdownEngine.getFact());
 
-  // Periodic System Metrics reader (every 5 seconds)
+  // Periodic System Metrics reader (every 10 seconds instead of 5 — reduce CPU)
   store.setSystem(systemMetricsReader.read());
   const systemInterval = setInterval(() => {
     store.setSystem(systemMetricsReader.read());
-  }, 5000);
+  }, 10_000);
 
   // Start lyrics manager
   lyricsManager.start();

@@ -17,7 +17,7 @@ export class DiscordScheduler {
 
   constructor(client: DiscordRpcClient, options: DiscordSchedulerOptions = {}) {
     this.client = client;
-    this.minIntervalMs = options.minIntervalMs ?? 3000;
+    this.minIntervalMs = options.minIntervalMs ?? 5000; // 5s minimum between writes (was 3s)
 
     // Resend activity when Discord RPC reconnects / emits ready
     this.client.on("ready", () => {
