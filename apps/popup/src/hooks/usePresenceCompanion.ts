@@ -41,6 +41,9 @@ export interface UsePresenceCompanionReturn {
   deleteCountdown: (id: string) => Promise<void>;
   toggleCountdown: (id: string) => Promise<void>;
   refresh: () => Promise<void>;
+  // Discord config
+  getDiscordConfig: () => Promise<{ clientId?: string; socketPath?: string }>;
+  saveDiscordConfig: (config: { clientId?: string; socketPath?: string }) => Promise<void>;
 }
 
 export function usePresenceCompanion(): UsePresenceCompanionReturn {
@@ -352,6 +355,28 @@ export function usePresenceCompanion(): UsePresenceCompanionReturn {
     }
   };
 
+  const getDiscordConfig = async (): Promise<{ clientId?: string; socketPath?: string }> => {
+    try {
+      const res = await fetch(`${API_HTTP_URL}/settings/discord`);
+      if (!res.ok) return {};
+      return await res.json();
+    } catch {
+      return {};
+    }
+  };
+
+  const saveDiscordConfig = async (config: { clientId?: string; socketPath?: string }) => {
+    try {
+      await fetch(`${API_HTTP_URL}/settings/discord`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(config),
+      });
+    } catch {
+      // ignore
+    }
+  };
+
   return {
     snapshot,
     wsConnected,
@@ -372,5 +397,7 @@ export function usePresenceCompanion(): UsePresenceCompanionReturn {
     deleteCountdown,
     toggleCountdown,
     refresh: fetchInitialState,
+    getDiscordConfig,
+    saveDiscordConfig,
   };
 }

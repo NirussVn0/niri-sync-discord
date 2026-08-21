@@ -272,6 +272,24 @@ export class ApiServer {
       return c.json(this.store.getRules());
     });
 
+    // Discord config endpoints
+    this.app.get("/api/settings/discord", (c) => {
+      return c.json(this.store.getDiscordConfig());
+    });
+
+    this.app.post("/api/settings/discord", async (c) => {
+      try {
+        const body = await c.req.json();
+        this.store.setDiscordConfig({
+          clientId: body.clientId || undefined,
+          socketPath: body.socketPath || undefined,
+        });
+        return c.json({ ok: true });
+      } catch {
+        return c.json({ error: "Invalid JSON" }, 400);
+      }
+    });
+
     this.app.put("/api/rules", async (c) => {
       try {
         const body = await c.req.json();

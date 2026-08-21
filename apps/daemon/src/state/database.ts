@@ -235,6 +235,29 @@ export class DatabaseManager {
     this.db.prepare("DELETE FROM countdowns WHERE id = ?").run(id);
   }
 
+  // ── Discord config (KV store) ──────────────────────────────────────────
+
+  public getDiscordConfig(): { clientId?: string; socketPath?: string } {
+    try {
+      const row = this.db
+        .prepare("SELECT value FROM kv_store WHERE key = ?")
+        .get("discord_config") as { value: string } | undefined;
+      if (!row) return {};
+      return JSON.parse(row.value);
+    } catch {
+      return {};
+    }
+  }
+
+  public saveDiscordConfig(config: { clientId?: string; socketPath?: string }): void {
+    const stmt = this.db.prepare(`
+      INSERT INTO kv_store (key, value, updated_at)
+      VALUES (?, ?, ?)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+    `);
+    stmt.run("discord_config", JSON.stringify(config), Date.now());
+  }
+
   public close(): void {
     this.db.close();
   }

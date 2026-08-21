@@ -1,6 +1,8 @@
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { PomodoroFact } from "@presenced/contracts";
 import { Clock, Play, Pause, RotateCcw, FastForward } from "lucide-react";
+import { springSnap, cardReveal, counterVariants } from "../lib/animations.js";
 
 interface PomodoroCardProps {
   pomodoro: PomodoroFact | null | undefined;
@@ -18,14 +20,7 @@ function formatMinutesSeconds(sec: number): string {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
-export const PomodoroCard = ({
-  pomodoro,
-  onStart,
-  onPause,
-  onResume,
-  onStop,
-  onSkip,
-}: PomodoroCardProps) => {
+export const PomodoroCard = ({ pomodoro, onStart, onPause, onResume, onStop, onSkip }: PomodoroCardProps) => {
   const [taskInput, setTaskInput] = useState("");
 
   const status = pomodoro?.status ?? "idle";
@@ -37,12 +32,9 @@ export const PomodoroCard = ({
 
   const getModeLabel = () => {
     switch (mode) {
-      case "short_break":
-        return "Short Break";
-      case "long_break":
-        return "Long Break";
-      default:
-        return "Focus Session";
+      case "short_break": return "Short Break";
+      case "long_break": return "Long Break";
+      default: return "Focus Session";
     }
   };
 
@@ -50,37 +42,45 @@ export const PomodoroCard = ({
     switch (mode) {
       case "short_break":
       case "long_break":
-        return "text-sky-400 bg-sky-500/10 border-sky-500/20";
+        return "text-scene-system-from bg-scene-system-from/10 border-scene-system-from/20";
       default:
-        return "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
+        return "text-status-connected bg-status-connected/10 border-status-connected/20";
     }
   };
 
   return (
-    <div className="p-3.5 rounded-xl bg-surface border border-surface-border space-y-3 select-none">
+    <motion.div
+      className="p-3.5 rounded-niri-lg glass-float space-y-3 select-none"
+      variants={cardReveal}
+      initial="hidden"
+      animate="visible"
+      custom={0}
+    >
       {/* Header with Mode & Session Dots */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400">
+        <div className="flex items-center gap-1.5 text-2xs font-semibold text-status-connected">
           <Clock className="w-3.5 h-3.5" />
           <span>Pomodoro</span>
         </div>
 
-        {/* 4 Session Dots */}
+        {/* Session Dots */}
         <div className="flex items-center gap-1">
           {Array.from({ length: totalSessions }).map((_, idx) => {
             const isCompleted = idx + 1 < currentSession;
             const isCurrent = idx + 1 === currentSession && status === "running";
 
             return (
-              <span
+              <motion.span
                 key={idx}
-                className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                className={`w-2 h-2 rounded-full ${
                   isCompleted
-                    ? "bg-emerald-400"
+                    ? "bg-status-connected"
                     : isCurrent
-                    ? "bg-emerald-400 animate-pulse ring-2 ring-emerald-400/30"
-                    : "bg-slate-800"
+                    ? "bg-status-connected"
+                    : "bg-surface-solid"
                 }`}
+                animate={isCurrent ? { scale: [1, 1.3, 1], opacity: [0.7, 1, 0.7] } : {}}
+                transition={{ duration: 1.5, repeat: Infinity }}
                 title={`Session ${idx + 1}`}
               />
             );
@@ -90,15 +90,19 @@ export const PomodoroCard = ({
 
       {/* Main Countdown Time & Task */}
       <div className="text-center py-2 space-y-1">
-        <span
-          className={`text-[10px] px-2 py-0.5 rounded-full font-mono uppercase tracking-wider border ${getModeColor()}`}
-        >
+        <span className={`text-2xs px-2 py-0.5 rounded-niri font-mono uppercase tracking-wider border ${getModeColor()}`}>
           {getModeLabel()} · {currentSession}/{totalSessions}
         </span>
 
-        <div className="text-3xl font-black font-mono tracking-tight text-white pt-1">
+        <motion.div
+          className="text-3xl font-black font-mono tracking-tight text-text-primary pt-1"
+          variants={counterVariants}
+          initial="initial"
+          animate="animate"
+          key={remainingSec}
+        >
           {formatMinutesSeconds(remainingSec)}
-        </div>
+        </motion.div>
 
         {status === "idle" ? (
           <div className="pt-1 px-4">
@@ -107,73 +111,91 @@ export const PomodoroCard = ({
               placeholder="What are you focusing on?"
               value={taskInput}
               onChange={(e) => setTaskInput(e.target.value)}
-              className="w-full px-2.5 py-1 text-xs bg-slate-900 border border-surface-border rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+              className="w-full px-2.5 py-1 text-2xs bg-surface-solid border border-border rounded-niri text-text-primary placeholder-text-ghost focus:outline-none focus:border-accent-primary transition-colors"
             />
           </div>
         ) : (
-          <p className="text-xs text-slate-300 font-medium truncate px-4">{taskName}</p>
+          <p className="text-xs text-text-secondary font-medium truncate px-4">{taskName}</p>
         )}
       </div>
 
       {/* Control Buttons */}
       <div className="flex items-center justify-center gap-2 pt-1">
         {status === "idle" ? (
-          <button
+          <motion.button
             type="button"
             onClick={() => onStart(taskInput)}
-            className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md shadow-emerald-600/30 transition-colors"
+            className="flex items-center gap-1.5 px-4 py-1.5 rounded-niri bg-status-connected hover:bg-status-connected/90 text-white text-xs font-bold shadow-glow-sm transition-colors"
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.96 }}
+            transition={springSnap}
           >
             <Play className="w-3.5 h-3.5 fill-current" />
             <span>Start Focus</span>
-          </button>
+          </motion.button>
         ) : status === "running" ? (
           <>
-            <button
+            <motion.button
               type="button"
               onClick={onPause}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold transition-colors"
+              className="flex items-center gap-1 px-3 py-1.5 rounded-niri bg-status-degraded hover:bg-status-degraded/90 text-white text-xs font-bold transition-colors"
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.96 }}
+              transition={springSnap}
             >
               <Pause className="w-3.5 h-3.5 fill-current" />
               <span>Pause</span>
-            </button>
-            <button
+            </motion.button>
+            <motion.button
               type="button"
               onClick={onSkip}
-              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition-colors"
+              className="p-1.5 rounded-niri glass-surface hover:text-text-primary text-text-secondary transition-colors"
               title="Skip to next session"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              transition={springSnap}
             >
               <FastForward className="w-3.5 h-3.5" />
-            </button>
-            <button
+            </motion.button>
+            <motion.button
               type="button"
               onClick={onStop}
-              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition-colors"
+              className="p-1.5 rounded-niri glass-surface hover:text-text-primary text-text-secondary transition-colors"
               title="Reset timer"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              transition={springSnap}
             >
               <RotateCcw className="w-3.5 h-3.5" />
-            </button>
+            </motion.button>
           </>
         ) : (
           <>
-            <button
+            <motion.button
               type="button"
               onClick={onResume}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-colors"
+              className="flex items-center gap-1 px-3 py-1.5 rounded-niri bg-status-connected hover:bg-status-connected/90 text-white text-xs font-bold transition-colors"
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.96 }}
+              transition={springSnap}
             >
               <Play className="w-3.5 h-3.5 fill-current" />
               <span>Resume</span>
-            </button>
-            <button
+            </motion.button>
+            <motion.button
               type="button"
               onClick={onStop}
-              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition-colors"
+              className="p-1.5 rounded-niri glass-surface hover:text-text-primary text-text-secondary transition-colors"
               title="Reset timer"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              transition={springSnap}
             >
               <RotateCcw className="w-3.5 h-3.5" />
-            </button>
+            </motion.button>
           </>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 };

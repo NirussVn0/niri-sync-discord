@@ -1,5 +1,7 @@
+import { motion } from "framer-motion";
 import { SystemFact } from "@presenced/contracts";
 import { Cpu, HardDrive, BatteryCharging, Battery, Clock, Server } from "lucide-react";
+import { cardReveal, progressBar } from "../lib/animations.js";
 
 interface SystemCardProps {
   system: SystemFact | null | undefined;
@@ -14,9 +16,7 @@ function formatBytesGb(bytes: number): string {
 function formatUptime(seconds: number): string {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
-  if (hours > 0) {
-    return `${hours}h ${minutes}m`;
-  }
+  if (hours > 0) return `${hours}h ${minutes}m`;
   return `${minutes}m`;
 }
 
@@ -25,10 +25,10 @@ export const SystemCard = ({ system }: SystemCardProps) => {
 
   if (!metrics) {
     return (
-      <div className="p-3.5 rounded-xl bg-surface border border-surface-border select-none text-center py-6 space-y-1">
-        <Cpu className="w-5 h-5 text-slate-600 mx-auto" />
-        <p className="text-xs font-semibold text-slate-400">System Telemetry Offline</p>
-        <p className="text-[10px] text-slate-600">Linux /proc metrics unavailable</p>
+      <div className="p-3.5 rounded-niri-lg glass-float select-none text-center py-6 space-y-1">
+        <Cpu className="w-5 h-5 text-text-ghost mx-auto" />
+        <p className="text-xs font-semibold text-text-secondary">System Telemetry Offline</p>
+        <p className="text-2xs text-text-muted">Linux /proc metrics unavailable</p>
       </div>
     );
   }
@@ -37,19 +37,31 @@ export const SystemCard = ({ system }: SystemCardProps) => {
   const ramPercent = metrics.ramPercent;
 
   const getCpuColor = (pct: number) => {
-    if (pct >= 80) return "text-rose-400";
-    if (pct >= 50) return "text-amber-400";
-    return "text-emerald-400";
+    if (pct >= 80) return "text-status-error";
+    if (pct >= 50) return "text-status-degraded";
+    return "text-status-connected";
+  };
+
+  const getCpuBarColor = (pct: number) => {
+    if (pct >= 80) return "bg-status-error";
+    if (pct >= 50) return "bg-status-degraded";
+    return "bg-status-connected";
   };
 
   return (
-    <div className="p-3.5 rounded-xl bg-surface border border-surface-border space-y-3 select-none">
+    <motion.div
+      className="p-3.5 rounded-niri-lg glass-float space-y-3 select-none"
+      variants={cardReveal}
+      initial="hidden"
+      animate="visible"
+      custom={0}
+    >
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5 text-xs font-semibold text-sky-400">
+        <div className="flex items-center gap-1.5 text-2xs font-semibold text-scene-system-from">
           <Server className="w-3.5 h-3.5" />
           <span>System Context</span>
         </div>
-        <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-mono">
+        <span className="text-2xs px-2 py-0.5 rounded-niri glass-surface text-text-secondary font-mono">
           {metrics.hostname || "Linux"}
         </span>
       </div>
@@ -57,57 +69,61 @@ export const SystemCard = ({ system }: SystemCardProps) => {
       {/* Grid of Telemetry Chips */}
       <div className="grid grid-cols-2 gap-2">
         {/* CPU Chip */}
-        <div className="p-2.5 rounded-lg bg-slate-900/70 border border-surface-border space-y-1.5">
-          <div className="flex items-center justify-between text-[11px] text-slate-400">
+        <div className="p-2.5 rounded-niri glass-surface space-y-1.5">
+          <div className="flex items-center justify-between text-2xs text-text-secondary">
             <span className="flex items-center gap-1">
-              <Cpu className="w-3 h-3 text-sky-400" />
-              <span>CPU Load</span>
+              <Cpu className="w-3 h-3 text-scene-system-from" />
+              <span>CPU</span>
             </span>
             <span className={`font-mono font-bold ${getCpuColor(cpuPercent)}`}>
               {cpuPercent}%
             </span>
           </div>
-          <div className="w-full h-1 bg-slate-800 rounded-full overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all duration-300 ${
-                cpuPercent >= 80 ? "bg-rose-400" : cpuPercent >= 50 ? "bg-amber-400" : "bg-emerald-400"
-              }`}
-              style={{ width: `${cpuPercent}%` }}
+          <div className="w-full h-1 bg-surface-solid rounded-full overflow-hidden">
+            <motion.div
+              className={`h-full rounded-full ${getCpuBarColor(cpuPercent)}`}
+              variants={progressBar}
+              initial="initial"
+              animate="animate"
+              custom={cpuPercent}
             />
           </div>
         </div>
 
         {/* RAM Chip */}
-        <div className="p-2.5 rounded-lg bg-slate-900/70 border border-surface-border space-y-1.5">
-          <div className="flex items-center justify-between text-[11px] text-slate-400">
+        <div className="p-2.5 rounded-niri glass-surface space-y-1.5">
+          <div className="flex items-center justify-between text-2xs text-text-secondary">
             <span className="flex items-center gap-1">
-              <HardDrive className="w-3 h-3 text-indigo-400" />
-              <span>Memory</span>
+              <HardDrive className="w-3 h-3 text-accent-primary" />
+              <span>RAM</span>
             </span>
-            <span className="font-mono font-bold text-slate-200">{ramPercent}%</span>
+            <span className="font-mono font-bold text-text-primary">{ramPercent}%</span>
           </div>
-          <div className="w-full h-1 bg-slate-800 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-indigo-500 rounded-full transition-all duration-300"
-              style={{ width: `${ramPercent}%` }}
+          <div className="w-full h-1 bg-surface-solid rounded-full overflow-hidden">
+            <motion.div
+              className="h-full bg-accent-primary rounded-full"
+              variants={progressBar}
+              initial="initial"
+              animate="animate"
+              custom={ramPercent}
             />
           </div>
         </div>
       </div>
 
       {/* Secondary Metrics Row */}
-      <div className="flex items-center justify-between pt-1 text-[11px] font-mono text-slate-400 border-t border-surface-border/50">
+      <div className="flex items-center justify-between pt-1 text-2xs font-mono text-text-muted border-t border-border-subtle">
         <div className="flex items-center gap-1">
-          <Clock className="w-3 h-3 text-slate-500" />
-          <span>Uptime: {formatUptime(metrics.uptimeSeconds)}</span>
+          <Clock className="w-3 h-3 text-text-ghost" />
+          <span>Up: {formatUptime(metrics.uptimeSeconds)}</span>
         </div>
 
         {metrics.batteryPercent !== undefined ? (
           <div className="flex items-center gap-1">
             {metrics.batteryState === "charging" ? (
-              <BatteryCharging className="w-3 h-3 text-emerald-400" />
+              <BatteryCharging className="w-3 h-3 text-status-connected" />
             ) : (
-              <Battery className="w-3 h-3 text-slate-400" />
+              <Battery className="w-3 h-3 text-text-secondary" />
             )}
             <span>{metrics.batteryPercent}%</span>
           </div>
@@ -115,6 +131,6 @@ export const SystemCard = ({ system }: SystemCardProps) => {
           <span>RAM {formatBytesGb(metrics.ramUsedBytes)}</span>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 };

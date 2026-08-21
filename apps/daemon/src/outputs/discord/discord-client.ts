@@ -12,6 +12,8 @@ export interface DiscordRpcClientOptions {
   initialBackoffMs?: number;
   maxBackoffMs?: number;
   connectFn?: (socketPath: string) => net.Socket;
+  /** Custom IPC socket path — overrides auto-detection. Set via Settings UI. */
+  customSocketPath?: string;
 }
 
 export class DiscordRpcClient extends EventEmitter {
@@ -29,6 +31,7 @@ export class DiscordRpcClient extends EventEmitter {
   private readonly clientId: string;
   private readonly autoReconnect: boolean;
   private readonly connectFn: (socketPath: string) => net.Socket;
+  private readonly customSocketPath: string | undefined;
   private reconnectTimer: NodeJS.Timeout | null = null;
 
   constructor(options: DiscordRpcClientOptions = {}) {
@@ -39,6 +42,7 @@ export class DiscordRpcClient extends EventEmitter {
     this.maxBackoffMs = options.maxBackoffMs ?? 30000;
     this.backoffMs = this.initialBackoffMs;
     this.connectFn = options.connectFn ?? ((sockPath) => net.createConnection(sockPath));
+    this.customSocketPath = options.customSocketPath;
   }
 
   public getHealth(): IntegrationHealth {
@@ -63,9 +67,11 @@ export class DiscordRpcClient extends EventEmitter {
   public static findIpcSocketPath(): string | null {
     const runtimeDir = process.env.XDG_RUNTIME_DIR;
     const tempDir = process.env.TMPDIR || "/tmp";
+    const homeDir = process.env.HOME || "";
 
     const candidateDirs = [
       runtimeDir,
+      // Official Discord
       runtimeDir ? path.join(runtimeDir, "app/com.discordapp.Discord") : null,
       runtimeDir ? path.join(runtimeDir, "app/com.discordapp.DiscordCanary") : null,
       runtimeDir ? path.join(runtimeDir, "snap.discord") : null,
@@ -75,6 +81,13 @@ export class DiscordRpcClient extends EventEmitter {
       "/tmp/snap.discord",
       "/tmp/snap.discord-canary",
       "/tmp/app/com.discordapp.Discord",
+      // Equicord / Vencord — run inside official Discord client so they share
+      // the same IPC socket, but some forks use custom runtime directories
+      runtimeDir ? path.join(runtimeDir, "app/com.equicord.Equicord") : null,
+      runtimeDir ? path.join(runtimeDir, "app/com.vencord.Vencord") : null,
+      // User-level XDG config paths for alternative Discord clients
+      homeDir ? path.join(homeDir, ".config/equicord") : null,
+      homeDir ? path.join(homeDir, ".config/Vencord") : null,
     ].filter((d): d is string => Boolean(d));
 
     for (const dir of candidateDirs) {
@@ -122,9 +135,10 @@ export class DiscordRpcClient extends EventEmitter {
   private connect(): void {
     if (!this.running) return;
 
-    const socketPath = DiscordRpcClient.findIpcSocketPath();
+    // Custom socket path from Settings takes priority
+    const socketPath = this.customSocketPath || DiscordRpcClient.findIpcSocketPath();
     if (!socketPath) {
-      this.setHealth("reconnecting", "Discord IPC socket not found (is Discord running?)");
+      this.setHealth("reconnecting", "Discord IPC socket not found (is Discord/Equicord running?)");
       this.scheduleReconnect();
       return;
     }

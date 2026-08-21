@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { LyricsPayload, MediaFact } from "@presenced/contracts";
 import { getActiveLyricLine } from "@presenced/core";
 import { Mic2, Sparkles, Music2, AlertCircle } from "lucide-react";
+import { lyricLineVariants, springGentle, cardReveal } from "../lib/animations.js";
 
 interface FocusedLyricsViewProps {
   lyrics: LyricsPayload | null | undefined;
@@ -40,16 +42,16 @@ export const FocusedLyricsView = ({ lyrics, media }: FocusedLyricsViewProps) => 
 
   if (lyrics === undefined) {
     return (
-      <div className="p-3 rounded-xl bg-surface/60 border border-surface-border text-center py-4 space-y-1 select-none">
-        <Mic2 className="w-4 h-4 text-slate-500 mx-auto animate-pulse" />
-        <p className="text-[11px] text-slate-400 font-mono">Fetching synchronized lyrics...</p>
+      <div className="p-3 rounded-niri-lg glass-surface text-center py-4 space-y-1 select-none">
+        <Mic2 className="w-4 h-4 text-text-ghost mx-auto animate-pulse" />
+        <p className="text-2xs text-text-muted font-mono">Fetching synchronized lyrics...</p>
       </div>
     );
   }
 
   if (!lyrics || (!lyrics.synced && !lyrics.plainLyrics && !lyrics.instrumental)) {
     return (
-      <div className="p-3 rounded-xl bg-surface/60 border border-surface-border flex items-center justify-center gap-2 py-3 text-slate-500 select-none">
+      <div className="p-3 rounded-niri-lg glass-surface flex items-center justify-center gap-2 py-3 text-text-muted select-none">
         <Mic2 className="w-3.5 h-3.5" />
         <span className="text-xs">No lyrics found for this track</span>
       </div>
@@ -58,7 +60,7 @@ export const FocusedLyricsView = ({ lyrics, media }: FocusedLyricsViewProps) => 
 
   if (lyrics.instrumental) {
     return (
-      <div className="p-3 rounded-xl bg-surface/60 border border-surface-border flex items-center justify-center gap-2 py-3 text-sky-400 select-none">
+      <div className="p-3 rounded-niri-lg glass-surface flex items-center justify-center gap-2 py-3 text-scene-system-from select-none">
         <Music2 className="w-3.5 h-3.5 animate-bounce" />
         <span className="text-xs font-semibold">Instrumental Track</span>
       </div>
@@ -67,15 +69,21 @@ export const FocusedLyricsView = ({ lyrics, media }: FocusedLyricsViewProps) => 
 
   if (!lyrics.synced && lyrics.plainLyrics) {
     return (
-      <div className="p-3 rounded-xl bg-surface/60 border border-surface-border space-y-1 select-none">
-        <div className="flex items-center gap-1 text-[10px] font-semibold text-slate-400">
-          <AlertCircle className="w-3 h-3 text-amber-400" />
+      <motion.div
+        className="p-3 rounded-niri-lg glass-surface space-y-1 select-none"
+        variants={cardReveal}
+        initial="hidden"
+        animate="visible"
+        custom={0}
+      >
+        <div className="flex items-center gap-1 text-2xs font-semibold text-text-secondary">
+          <AlertCircle className="w-3 h-3 text-status-degraded" />
           <span>Plain Lyrics (Unsynced)</span>
         </div>
-        <p className="text-xs text-slate-300 italic line-clamp-2 leading-relaxed">
+        <p className="text-xs text-text-secondary italic line-clamp-2 leading-relaxed">
           {lyrics.plainLyrics.split("\n").filter(Boolean).slice(0, 2).join(" · ")}
         </p>
-      </div>
+      </motion.div>
     );
   }
 
@@ -89,35 +97,57 @@ export const FocusedLyricsView = ({ lyrics, media }: FocusedLyricsViewProps) => 
       : null;
 
   return (
-    <div className="p-3 rounded-xl bg-surface border border-surface-border space-y-2 select-none">
+    <motion.div
+      className="p-3 rounded-niri-lg glass-float space-y-2 select-none"
+      variants={cardReveal}
+      initial="hidden"
+      animate="visible"
+      custom={0}
+    >
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5 text-[11px] font-bold text-indigo-400">
+        <div className="flex items-center gap-1.5 text-2xs font-bold text-accent-primary">
           <Sparkles className="w-3.5 h-3.5" />
           <span>Synced Lyrics Focus</span>
         </div>
-        <span className="text-[9px] px-1.5 py-0.2 rounded bg-indigo-500/10 text-indigo-300 font-mono border border-indigo-500/20">
+        <span className="text-2xs px-1.5 py-0.2 rounded-niri bg-accent-primary/10 text-accent-primary font-mono border border-accent-primary/20">
           LRCLIB
         </span>
       </div>
 
-      {/* 3-Line Focus Area with Fixed Uniform Heights */}
+      {/* 3-Line Focus Area with animated transitions */}
       <div className="flex flex-col justify-center space-y-1 h-[78px] overflow-hidden text-center">
         {/* Previous Line */}
-        <div className="h-5 text-xs text-slate-500 truncate transition-opacity duration-300 opacity-60">
+        <div className="h-5 text-xs text-text-muted truncate opacity-60">
           {prevLine?.text || "..."}
         </div>
 
-        {/* Active Line */}
-        <div className="h-6 text-xs font-bold text-indigo-300 tracking-tight truncate flex items-center justify-center gap-1.5 transition-all duration-300 transform scale-[1.02]">
-          <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-ping inline-block flex-shrink-0" />
-          <span className="truncate">{activeLine?.text || "♫ ... ♫"}</span>
+        {/* Active Line — animated */}
+        <div className="h-6 flex items-center justify-center gap-1.5">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeLine?.text ?? "empty"}
+              variants={lyricLineVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={springGentle}
+              className="text-xs font-bold text-accent-primary tracking-tight truncate flex items-center justify-center gap-1.5"
+            >
+              <motion.span
+                className="w-1.5 h-1.5 rounded-full bg-accent-primary inline-block flex-shrink-0"
+                animate={{ scale: [1, 1.4, 1], opacity: [0.6, 1, 0.6] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+              />
+              <span className="truncate">{activeLine?.text || "♫ ... ♫"}</span>
+            </motion.div>
+          </AnimatePresence>
         </div>
 
         {/* Next Line */}
-        <div className="h-5 text-xs text-slate-500 truncate transition-opacity duration-300 opacity-60">
+        <div className="h-5 text-xs text-text-muted truncate opacity-60">
           {nextLine?.text || "..."}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };

@@ -1,5 +1,8 @@
 import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import { SceneType } from "@presenced/contracts";
+import { getSceneMeta } from "../lib/scene-registry.js";
+import { springSnap } from "../lib/animations.js";
 
 interface HeaderWidgetProps {
   wsConnected: boolean;
@@ -39,46 +42,59 @@ export const HeaderWidget = ({
     return "Good evening";
   };
 
-  const sceneLabels: Record<SceneType, string> = {
-    auto: "Auto",
-    music: "Music",
-    focus: "Focus",
-    pomodoro: "Pomodoro",
-    countdown: "Countdown",
-    system: "System",
-    privacy: "Privacy",
-    custom: "Custom",
-  };
+  const sceneMeta = getSceneMeta(activeSceneType);
 
   return (
-    <header className="flex items-center justify-between pb-3 border-b border-surface-border/80 select-none">
+    <header className="flex items-center justify-between pb-3 border-b border-border-subtle select-none">
       <div className="flex items-center gap-2.5 min-w-0">
-        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-600 via-indigo-500 to-sky-400 flex items-center justify-center font-bold text-xs text-white shadow-md flex-shrink-0">
-          {userName.charAt(0).toUpperCase()}
+        {/* Avatar with scene-colored ring */}
+        <div className="relative">
+          <div
+            className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs text-white shadow-glow-sm"
+            style={{
+              background: `linear-gradient(135deg, ${sceneMeta.colorFrom}, ${sceneMeta.colorTo})`,
+            }}
+          >
+            {userName.charAt(0).toUpperCase()}
+          </div>
+          {/* Connection indicator */}
+          <motion.div
+            className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background-solid ${
+              wsConnected ? "bg-status-connected" : "bg-status-degraded"
+            }`}
+            animate={wsConnected ? { scale: [1, 1.2, 1] } : {}}
+            transition={{ duration: 2, repeat: Infinity }}
+            title={wsConnected ? "Daemon Connected" : "Connecting..."}
+          />
         </div>
+
         <div className="min-w-0">
-          <h1 className="text-xs font-bold tracking-tight text-white flex items-center gap-1.5 truncate">
+          <h1 className="text-xs font-bold tracking-tight text-text-primary flex items-center gap-1.5 truncate">
             <span>{`${getGreeting()}, ${userName}`}</span>
-            <span
-              className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
-                wsConnected ? "bg-emerald-400 animate-pulse" : "bg-amber-400"
-              }`}
-              title={wsConnected ? "Daemon Connected" : "Connecting to Daemon..."}
-            />
           </h1>
-          <p className="text-[10px] text-slate-400 font-mono truncate">
+          <p className="text-2xs text-text-muted font-mono truncate">
             {dateStr} · {workspaceId != null ? `Workspace ${workspaceId}` : "Niri Wayland"}
           </p>
         </div>
       </div>
 
       <div className="text-right flex-shrink-0 pl-2">
-        <div className="text-sm font-bold font-mono text-white tracking-wider">
+        <div className="text-sm font-bold font-mono text-text-primary tracking-wider">
           {timeStr || "12:00"}
         </div>
-        <span className="text-[9px] px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-300 font-mono border border-indigo-500/20 capitalize inline-block">
-          {sceneLabels[activeSceneType] ?? "Auto"} Scene
-        </span>
+        <motion.span
+          className="text-2xs px-2 py-0.5 rounded-niri font-mono border capitalize inline-block"
+          style={{
+            backgroundColor: `${sceneMeta.colorFrom}15`,
+            color: sceneMeta.colorFrom,
+            borderColor: `${sceneMeta.colorFrom}30`,
+          }}
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={springSnap}
+        >
+          {sceneMeta.shortLabel} Scene
+        </motion.span>
       </div>
     </header>
   );

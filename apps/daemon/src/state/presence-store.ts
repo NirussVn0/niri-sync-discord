@@ -117,6 +117,14 @@ export class PresenceStore extends EventEmitter {
     this.recompute();
   }
 
+  public getDiscordConfig(): { clientId?: string; socketPath?: string } {
+    return this.database?.getDiscordConfig() ?? {};
+  }
+
+  public setDiscordConfig(config: { clientId?: string; socketPath?: string }): void {
+    this.database?.saveDiscordConfig(config);
+  }
+
   public setHealth(health: IntegrationHealth): void {
     this.health[health.source] = health;
     const event: DaemonEvent = {

@@ -32,8 +32,13 @@ async function bootstrap() {
   const systemMetricsReader = new SystemMetricsReader();
   const tokenManager = new TokenManager({ enableAuth });
 
+  // Resolve Discord Client ID: env > DB > default
+  const dbDiscordConfig = store.getDiscordConfig();
+  const resolvedClientId = discordClientId || dbDiscordConfig.clientId;
+
   const discordClient = new DiscordRpcClient({
-    ...(discordClientId ? { clientId: discordClientId } : {}),
+    ...(resolvedClientId ? { clientId: resolvedClientId } : {}),
+    ...(dbDiscordConfig.socketPath ? { customSocketPath: dbDiscordConfig.socketPath } : {}),
   });
   const discordScheduler = new DiscordScheduler(discordClient);
   const apiServer = new ApiServer({
