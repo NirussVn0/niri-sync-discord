@@ -1,12 +1,12 @@
 use tauri::Manager;
 
 #[tauri::command]
-fn minimize_window(window: tauri::Window) {
+fn minimize_window(window: tauri::WebviewWindow) {
     let _ = window.minimize();
 }
 
 #[tauri::command]
-fn toggle_maximize(window: tauri::Window) {
+fn toggle_maximize(window: tauri::WebviewWindow) {
     if window.is_maximized().unwrap_or(false) {
         let _ = window.unmaximize();
     } else {
@@ -15,8 +15,18 @@ fn toggle_maximize(window: tauri::Window) {
 }
 
 #[tauri::command]
-fn close_window(window: tauri::Window) {
+fn close_window(window: tauri::WebviewWindow) {
     let _ = window.close();
+}
+
+#[tauri::command]
+fn toggle_visibility(window: tauri::WebviewWindow) {
+    if window.is_visible().unwrap_or(false) {
+        let _ = window.hide();
+    } else {
+        let _ = window.show();
+        let _ = window.set_focus();
+    }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -27,9 +37,9 @@ pub fn run() {
             minimize_window,
             toggle_maximize,
             close_window,
+            toggle_visibility,
         ])
         .setup(|app| {
-            // Make window draggable by the main container
             let window = app.get_webview_window("main").unwrap();
             window.set_decorations(false)?;
             Ok(())
