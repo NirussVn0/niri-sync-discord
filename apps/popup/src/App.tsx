@@ -15,17 +15,7 @@ import { WindowControls } from "./components/WindowControls.js";
 import { SettingsPanel } from "./settings/SettingsPanel.js";
 import { springNiri, springSnap } from "./lib/animations.js";
 import { getVisibleWidgets } from "./lib/widget-registry.js";
-import { Settings, ChevronLeft } from "lucide-react";
-
-declare global {
-  interface Window {
-    __TAURI__?: {
-      core: {
-        invoke: (cmd: string, args?: Record<string, unknown>) => Promise<unknown>;
-      };
-    };
-  }
-}
+import { Settings } from "lucide-react";
 
 export function App() {
   const {
@@ -38,189 +28,70 @@ export function App() {
   } = usePresenceCompanion();
 
   const { visibility, isExpanded, toggleWidget, toggleSettings, collapseSettings } = useWidgetConfig();
-
   const isMusicPlaying = snapshot?.media?.playback === "playing";
   const audioAnalysis = useAudioAnalysis(isMusicPlaying);
 
-  // Keyboard shortcuts
   useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isExpanded) {
-        collapseSettings();
-      }
-    };
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
+    const h = (e: KeyboardEvent) => { if (e.key === "Escape" && isExpanded) collapseSettings(); };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
   }, [isExpanded, collapseSettings]);
 
   const visibleWidgets = getVisibleWidgets(visibility);
+  const topWidgets = visibleWidgets.filter((w) => ["music", "rpc"].includes(w.id));
+  const bottomWidgets = visibleWidgets.filter((w) => !["music", "rpc"].includes(w.id));
 
-  // Determine window size based on mode
-  const windowWidth = isExpanded ? 640 : 340;
+  const renderWidget = (id: string) => {
+    switch (id) {
+      case "music": return <MusicWidget media={snapshot?.media} onPlayPause={playPauseMedia} onNext={nextMedia} onPrevious={previousMedia} />;
+      case "rpc": return <RpcWidget connected={wsConnected} status={snapshot?.presence?.title ?? undefined} />;
+      case "pomodoro": return <PomodoroWidget pomodoro={snapshot?.pomodoro} onStart={(t) => startPomodoro(t)} onPause={pausePomodoro} onResume={resumePomodoro} onStop={stopPomodoro} onSkip={skipPomodoro} />;
+      case "countdown": return <CountdownWidget countdown={snapshot?.countdown} />;
+      case "lyrics": return <LyricsWidget lyrics={snapshot?.lyrics} media={snapshot?.media} />;
+      case "system": return <SystemWidget system={snapshot?.system} />;
+      case "connection": return <ConnectionWidget health={snapshot?.health} />;
+      default: return null;
+    }
+  };
 
   return (
-    <motion.div
-      className="relative min-h-[480px] max-h-[660px] bg-background glass-strong rounded-niri-xl text-text-primary flex flex-col select-none font-sans overflow-hidden"
-      data-tauri-drag-region
-      animate={{ width: windowWidth }}
-      transition={springNiri}
-      style={{
-        "--audio-bass": String(audioAnalysis.bass),
-        "--audio-volume": String(audioAnalysis.volume),
-      } as any}
-    >
-      {/* Ambient glow */}
-      <div
-        className="absolute inset-0 pointer-events-none rounded-niri-xl transition-opacity duration-300"
-        style={{
-          background: "radial-gradient(ellipse at 50% 0%, rgba(124,138,255,0.15) 0%, transparent 70%)",
-          opacity: 0.2 + audioAnalysis.volume * 0.3,
-        }}
-      />
+    <div className="flex flex-col gap-2 select-none font-sans" style={{ width: isExpanded ? 680 : undefined } as any}>
+      {/* Widget 1: Clock + Controls */}
+      <motion.div className="glass-strong rounded-niri-xl p-3 flex items-center justify-between" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={springNiri}>
+        <HeaderWidget wsConnected={wsConnected} activeSceneType={snapshot?.scene?.activeSceneType ?? "auto"} userName="Niruss" />
+        <div className="flex items-center gap-1">
+          <motion.button type="button" onClick={toggleSettings} className={`p-1.5 rounded-niri transition-colors ${isExpanded ? "bg-accent-primary/20 text-accent-primary" : "glass-surface text-text-secondary hover:text-text-primary"}`} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} transition={springSnap}>
+            <Settings className="w-3.5 h-3.5" />
+          </motion.button>
+          <WindowControls />
+        </div>
+      </motion.div>
 
-      <div className="relative z-10 flex flex-col h-full p-3">
-        {/* Header */}
-        <div className="flex items-center justify-between pb-2 border-b border-border-subtle">
-          <HeaderWidget
-            wsConnected={wsConnected}
-            activeSceneType={snapshot?.scene?.activeSceneType ?? "auto"}
-            userName="Niruss"
-          />
-          <div className="flex items-center gap-1">
-            {isExpanded && (
-              <motion.button
-                type="button"
-                onClick={collapseSettings}
-                className="p-1.5 rounded-niri glass-surface text-text-secondary hover:text-text-primary transition-colors"
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                transition={springSnap}
-              >
-                <ChevronLeft className="w-3.5 h-3.5" />
-              </motion.button>
+      {/* Widget 2: Dashboard content */}
+      <AnimatePresence mode="wait">
+        {isExpanded ? (
+          <motion.div key="settings" className="glass-strong rounded-niri-xl p-3" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={springNiri}>
+            <SettingsPanel visibility={visibility} toggleWidget={toggleWidget} onClose={collapseSettings} snapshot={snapshot} onSetPrivacyMode={setPrivacyMode} onAddCountdown={addCountdown} onDeleteCountdown={deleteCountdown} onToggleCountdown={toggleCountdown} getDiscordConfig={getDiscordConfig} saveDiscordConfig={saveDiscordConfig} getRvcConfig={getRvcConfig} saveRvcConfig={saveRvcConfig} />
+          </motion.div>
+        ) : (
+          <motion.div key="dashboard" className="glass-strong rounded-niri-xl p-3 space-y-2 max-h-[480px] overflow-y-auto scrollbar-thin relative" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={springNiri} style={{ background: "rgba(12,15,24,0.35)", backdropFilter: "blur(24px)" }}>
+            <div className="absolute inset-0 pointer-events-none rounded-niri-xl" style={{ background: "radial-gradient(ellipse at 50% 0%, rgba(124,138,255,0.15) 0%, transparent 70%)", opacity: 0.2 + audioAnalysis.volume * 0.3 }} />
+            {topWidgets.length > 0 && (
+              <div className="grid grid-cols-2 gap-2 relative">
+                {topWidgets.map((w) => <div key={w.id}>{renderWidget(w.id)}</div>)}
+              </div>
             )}
-            <motion.button
-              type="button"
-              onClick={toggleSettings}
-              className={`p-1.5 rounded-niri transition-colors ${
-                isExpanded
-                  ? "bg-accent-primary/20 text-accent-primary"
-                  : "glass-surface text-text-secondary hover:text-text-primary"
-              }`}
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              transition={springSnap}
-            >
-              <Settings className="w-3.5 h-3.5" />
-            </motion.button>
-            <WindowControls />
-          </div>
-        </div>
+            {bottomWidgets.map((w) => <div key={w.id} className="relative">{renderWidget(w.id)}</div>)}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-        {/* Main content area */}
-        <div className="flex-1 overflow-y-auto scrollbar-thin py-2">
-          <AnimatePresence mode="wait">
-            {isExpanded ? (
-              <motion.div
-                key="settings"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={springNiri}
-              >
-                <SettingsPanel
-                  visibility={visibility}
-                  toggleWidget={toggleWidget}
-                  onClose={collapseSettings}
-                  snapshot={snapshot}
-                  onSetPrivacyMode={setPrivacyMode}
-                  onAddCountdown={addCountdown}
-                  onDeleteCountdown={deleteCountdown}
-                  onToggleCountdown={toggleCountdown}
-                  getDiscordConfig={getDiscordConfig}
-                  saveDiscordConfig={saveDiscordConfig}
-                  getRvcConfig={getRvcConfig}
-                  saveRvcConfig={saveRvcConfig}
-                />
-              </motion.div>
-            ) : (
-              <motion.div
-                key="dashboard"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                transition={springNiri}
-                className="space-y-2"
-              >
-                {visibleWidgets.map((widget) => {
-                  switch (widget.id) {
-                    case "music":
-                      return (
-                        <MusicWidget
-                          key={widget.id}
-                          media={snapshot?.media}
-                          onPlayPause={playPauseMedia}
-                          onNext={nextMedia}
-                          onPrevious={previousMedia}
-                        />
-                      );
-                    case "rpc":
-                      return (
-                        <RpcWidget
-                          key={widget.id}
-                          connected={wsConnected}
-                          status={snapshot?.presence?.title ?? undefined}
-                        />
-                      );
-                    case "pomodoro":
-                      return (
-                        <PomodoroWidget
-                          key={widget.id}
-                          pomodoro={snapshot?.pomodoro}
-                          onStart={(t) => startPomodoro(t)}
-                          onPause={pausePomodoro}
-                          onResume={resumePomodoro}
-                          onStop={stopPomodoro}
-                          onSkip={skipPomodoro}
-                        />
-                      );
-                    case "countdown":
-                      return <CountdownWidget key={widget.id} countdown={snapshot?.countdown} />;
-                    case "lyrics":
-                      return (
-                        <LyricsWidget
-                          key={widget.id}
-                          lyrics={snapshot?.lyrics}
-                          media={snapshot?.media}
-                        />
-                      );
-                    case "system":
-                      return <SystemWidget key={widget.id} system={snapshot?.system} />;
-                    case "connection":
-                      return <ConnectionWidget key={widget.id} health={snapshot?.health} />;
-                    default:
-                      return null;
-                  }
-                })}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* Status bar */}
-        <div className="pt-2 border-t border-border-subtle flex items-center justify-between text-2xs text-text-muted">
-          <span className="font-mono">presenced v0.4.0</span>
-          <div className="flex items-center gap-1.5">
-            <span
-              className={`w-1.5 h-1.5 rounded-full ${
-                wsConnected ? "bg-status-connected" : "bg-status-degraded"
-              }`}
-            />
-            <span>{wsConnected ? "Daemon" : "Offline"}</span>
-          </div>
-        </div>
+      {/* Status bar */}
+      <div className="text-center text-2xs text-text-muted font-mono">
+        <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1 ${wsConnected ? "bg-status-connected" : "bg-status-degraded"}`} />
+        {wsConnected ? "presenced v0.4.1" : "Offline"}
       </div>
-    </motion.div>
+    </div>
   );
 }
 
