@@ -29,11 +29,13 @@ The system is running natively under Wayland with Niri managing active outputs a
 
 ## 2. Technical Spike Findings
 
+> **Shipping status (v0.6.0):** `gtk-layer-shell` remains a researched future path; it is not wired into the Rust runtime. The shipped popup is a native Tauri Wayland window matched by runtime app ID `presenced-popup-niri` and forced into Niri's floating layout by the validated rule in `niri/presenced-popup-niri.kdl`.
+
 ### 2.1 Native Wayland vs XWayland
 - Under Tauri v2 with WebKitGTK 4.1, setting `GDK_BACKEND=wayland,x11` allows the Tauri window to initialize directly as a native Wayland client without invoking XWayland.
 - Tauri's window handle on Linux provides direct access to the underlying `gtk::ApplicationWindow` / `gtk::Window`.
 
-### 2.2 Layer-Shell Integration Mechanism
+### 2.2 Proposed Layer-Shell Integration Mechanism
 - **Crate / Library**: `gtk-layer-shell` (`libgtk-layer-shell.so.0`) is installed on the system and natively supported by Niri.
 - **Initialization**:
   1. Call `gtk_layer_shell::init_for_window(&gtk_window)` before mapping or during window setup.
@@ -46,7 +48,7 @@ The system is running natively under Wayland with Niri managing active outputs a
   5. Keyboard Interactivity: `gtk_layer_shell::set_keyboard_interactivity(&gtk_window, KeyboardInteractivity::OnDemand)`.
   6. Monitor Alignment: `gtk_layer_shell::set_monitor(&gtk_window, target_gdk_monitor)` aligned with Niri's `focused-output`.
 
-### 2.3 Layer Policy Decisions
+### 2.3 Proposed Layer Policy
 - **Default Popup Mode**: `Layer::Top`. Sits above regular tiled windows and bars without interfering with full-screen games unless explicitly summoned.
 - **Fullscreen Policy**: When the active output contains a fullscreen window, the popup either honors `Top` or allows configurable dismissal upon overview/game focus.
 - **Overview State**: When Niri enters Overview (`WorkspaceOverviewChanged` or `is_active`), the popup listens to the event stream via `NiriShellAdapter` and toggles visibility gracefully without destroying webview DOM state.
@@ -55,22 +57,24 @@ The system is running natively under Wayland with Niri managing active outputs a
 - When the layer-shell popup requests keyboard focus (`KeyboardInteractivity::OnDemand`), Niri emits `WindowFocusChanged { id: null }` for tiled windows.
 - **Context Protection Rule**: `PresenceStore` and `SceneResolver` must treat the popup's own application ID (`io.niruss.presenced-popup-niri` / layer surface `presenced-popup-niri`) as transparent overlay focus, preserving the last non-empty desktop activity (e.g. `Coding` remains `Coding` rather than degrading to `Idle`).
 
-### 2.5 Normal Window Fallback
-If `gtk-layer-shell` is unavailable or fails initialization (e.g. when run under an unsupported compositor or pure X11), `PopupSurfaceAdapter` falls back to an ordinary floating Tauri window with:
-- `app_id: "io.niruss.presenced-popup-niri"`
-- Dimensions: `width: 390px`, `height: 600px`
+### 2.5 Current Shipping Mode
+The current release uses an ordinary native Wayland Tauri window with compositor-enforced popup semantics:
+- `app_id: "presenced-popup-niri"`
+- Dimensions: `width: 720px`, `height: 420px`
 - Niri Recommended Rule:
   ```kdl
   window-rule {
-      match app-id="io.niruss.presenced-popup-niri"
+      match app-id="^presenced-popup-niri$"
       open-floating true
-      default-column-width { fixed 390; }
+      open-focused true
+      default-column-width { fixed 720; }
+      default-window-height { fixed 420; }
   }
   ```
 
 ---
 
-## 3. Architectural Boundary Confirmation
+## 3. Target Architectural Boundary
 
 ```text
                       Niri Compositor
@@ -87,7 +91,7 @@ If `gtk-layer-shell` is unavailable or fails initialization (e.g. when run under
                                           │
                                           ▼
                                    Tauri v2 Popup
-                              (Top Layer-Shell Surface)
+                         (Niri Floating Surface in v0.6.0)
 ```
 
 The presence engine and popup surface remain decoupled. The popup is a view and control surface; the daemon is the independent state engine.

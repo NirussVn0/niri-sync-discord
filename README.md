@@ -81,7 +81,6 @@ sudo pacman -S --needed \
   cargo \
   base-devel \
   webkit2gtk-4.1 \
-  gtk-layer-shell \
   libappindicator-gtk3 \
   playerctl
 ```
@@ -96,7 +95,6 @@ sudo dnf install \
   cargo \
   gcc-c++ \
   webkit2gtk4.1-devel \
-  gtk-layer-shell-devel \
   libappindicator-gtk3-devel \
   playerctl
 ```
@@ -110,7 +108,6 @@ sudo apt update && sudo apt install -y \
   rustc \
   build-essential \
   libwebkit2gtk-4.1-dev \
-  libgtk-layer-shell-dev \
   libayatana-appindicator3-dev \
   playerctl
 
@@ -190,27 +187,26 @@ journalctl --user -u presenced.service -f
 
 ## 🖥️ Niri Wayland Integration
 
-Add the following configuration to `~/.config/niri/config.kdl` to bind a hotkey and position the companion as a native floating window:
+`./scripts/install.sh` now installs and validates `~/.config/niri/config.d/85-presenced-popup-niri.kdl`, then includes it from `config.kdl`. The rule forces the real runtime app ID into Niri's floating layer at 720×420; Niri centers newly opened floating windows by default.
+
+Only the optional hotkey needs to be added manually:
 
 ```kdl
 // Keybinding to launch or toggle the companion popup
 binds {
-    Mod+P { spawn "presenced-popup"; }
+    Mod+P { spawn "presenced-popup-niri"; }
 }
+```
 
-// Window rules for the companion popup
+The installed compositor rule is:
+
+```kdl
 window-rule {
-    match app-id="^io\\.niruss\\.presenced-popup-niri$"
     match app-id="^presenced-popup-niri$"
-    match title="^presenced$"
     open-floating true
-    default-floating-position center
-    shadow {
-        on
-        softness 30
-        spread 5
-        offset x=0 y=4
-    }
+    open-focused true
+    default-column-width { fixed 720; }
+    default-window-height { fixed 420; }
 }
 ```
 

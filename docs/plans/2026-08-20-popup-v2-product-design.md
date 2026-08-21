@@ -105,12 +105,13 @@ A **Scene** determines the active context displayed in the popup and published t
 
 ## 7. Sources
 
-1. **`NiriSource` / `NiriShellAdapter`**: Window focus, workspace transitions, active outputs (`niri msg --json event-stream`).
-2. **`MprisSource`**: Track title, artist, album, art URL, playback status, monotonic position anchor (`playerctl metadata --follow`).
-3. **`LrclibSource`**: Synchronized lyrics, plain lyrics, instrumental status, match confidence (`https://lrclib.net/api/get` + `/search`).
-4. **`PomodoroEngine`**: Monotonic interval timer managing Focus (25m), Short Break (5m), Long Break (15m), and session count.
-5. **`CountdownEngine`**: Active user countdown target calculations (days, hours, minutes remaining).
-6. **`SystemSource`**: CPU usage percentage, RAM usage, battery level, and CPU temp.
+1. **`NiriSource`**: Window focus and workspace transitions from `niri msg --json event-stream`.
+2. **`NiriShellAdapter`**: On-demand output and workspace snapshots from `niri msg --json outputs` and `workspaces`.
+3. **`MprisSource`**: Track title, artist, album, art URL, playback status, monotonic position anchor (`playerctl metadata --follow`).
+4. **`LrclibSource`**: Synchronized lyrics, plain lyrics, instrumental status, match confidence (`https://lrclib.net/api/get` + `/search`).
+5. **`PomodoroEngine`**: Monotonic interval timer managing Focus (25m), Short Break (5m), Long Break (15m), and session count.
+6. **`CountdownEngine`**: Active user countdown target calculations (days, hours, minutes remaining).
+7. **`SystemSource`**: CPU usage percentage, RAM usage, battery level, and CPU temp.
 
 ---
 
@@ -184,7 +185,7 @@ Title masking by default; one-click Privacy Scene; per-app rules (`hide`, `gener
 ## 18. Tauri v2 Application Architecture
 
 - `apps/popup/src/`: React 19 + TypeScript + Tailwind CSS.
-- `apps/popup/src-tauri/`: Minimal Rust bootstrap, Wayland layer-shell configuration, and global shortcut listener.
+- `apps/popup/src-tauri/`: Minimal Rust bootstrap and Tauri window commands; Niri popup placement is installed separately as a validated compositor rule.
 
 ---
 
@@ -221,28 +222,27 @@ Strict typecheck, passing Vitest suite, native Wayland popup execution, zero reg
 ## 24. Native Niri / Wayland Integration
 
 ### 24.1 Architecture & Layer Policy
-- **Primary Mode**: Wayland native + `wlr-layer-shell` via `gtk-layer-shell` on GTK3 WebKitGTK window handle.
-- **Layer**: `Layer::Top` (sits above normal tiled windows and status bars).
-- **Placement**: Anchored `Top | Right` with `16px` top and right margins on the currently focused Niri output.
-- **Namespace**: `presenced-popup-niri`
-- **Application ID**: `io.niruss.presenced-popup-niri`
+- **Shipped Mode (v0.6.0)**: Native Wayland Tauri window plus a validated Niri `open-floating` rule.
+- **Layer**: Niri floating layout, which stays above tiled windows.
+- **Placement**: Centered by Niri when opened, fixed at 720×420.
+- **Runtime Application ID**: `presenced-popup-niri`.
+- **Future Option**: `gtk-layer-shell` remains research only and is not part of the current Rust runtime.
 
 ### 24.2 NiriShellAdapter & Output Sync
-`NiriShellAdapter` monitors Niri's JSON event stream (`niri msg --json event-stream`):
-- Tracks `focused-output` dynamically (e.g. `HDMI-A-3` vs `DP-4`).
-- Listens to workspace changes and overview toggle events (`OverviewOpened` / `OverviewClosed`).
-- Hides popup smoothly during overview without destroying DOM state.
+`NiriShellAdapter` currently refreshes Niri outputs and workspaces on demand through JSON IPC. It does not yet own popup placement or event-driven overview dismissal; those remain future work.
 
 ### 24.3 Focus Protection Semantics
 When the popup receives keyboard interactivity or focus, `PresenceStore` detects that the focused window or layer surface belongs to `presenced-popup-niri` / `io.niruss.presenced-popup-niri`. Instead of switching presence candidate to `Idle`, the presence engine preserves the last meaningful desktop activity (e.g. `Coding`).
 
-### 24.4 Normal Window Fallback
-If `gtk-layer-shell` is unavailable, `PopupSurfaceAdapter` falls back to an ordinary floating Tauri window with recommended Niri window rule:
+### 24.4 Shipped Niri Window Rule
+The installer deploys and validates this rule automatically:
 ```kdl
 window-rule {
-    match app-id="io.niruss.presenced-popup-niri"
+    match app-id="^presenced-popup-niri$"
     open-floating true
-    default-column-width { fixed 390; }
+    open-focused true
+    default-column-width { fixed 720; }
+    default-window-height { fixed 420; }
 }
 ```
 

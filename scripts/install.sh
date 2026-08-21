@@ -12,6 +12,9 @@ APP_DIR="$HOME/.local/share/applications"
 ICON_DIR="$HOME/.local/share/icons/hicolor/512x512/apps"
 SYSTEMD_DIR="$HOME/.config/systemd/user"
 DAEMON_DIR="$HOME/.local/share/presenced/daemon"
+NIRI_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/niri"
+NIRI_CONFIG="$NIRI_DIR/config.kdl"
+NIRI_FRAGMENT="$NIRI_DIR/config.d/85-presenced-popup-niri.kdl"
 
 APP_NAME="presenced-popup-niri"
 APP_ID="io.niruss.presenced-popup-niri"
@@ -60,7 +63,41 @@ if command -v update-desktop-database >/dev/null 2>&1; then
   update-desktop-database "$APP_DIR" || true
 fi
 
-# 7. Install systemd service
+# 7. Install and validate the Niri floating-window rule
+if [ -f "$NIRI_CONFIG" ]; then
+  echo "Installing Niri floating popup rule..."
+  mkdir -p "$NIRI_DIR/config.d"
+
+  NIRI_INCLUDE='include "config.d/85-presenced-popup-niri.kdl"'
+  NIRI_CONFIG_BACKUP="$NIRI_CONFIG.presenced-backup"
+  NIRI_FRAGMENT_BACKUP="$NIRI_FRAGMENT.presenced-backup"
+  cp -f "$NIRI_CONFIG" "$NIRI_CONFIG_BACKUP"
+  if [ -f "$NIRI_FRAGMENT" ]; then
+    cp -f "$NIRI_FRAGMENT" "$NIRI_FRAGMENT_BACKUP"
+  fi
+
+  cp -f "$REPO_DIR/niri/presenced-popup-niri.kdl" "$NIRI_FRAGMENT"
+  if ! grep -Fqx "$NIRI_INCLUDE" "$NIRI_CONFIG"; then
+    printf '\n// presenced-popup-niri floating popup\n%s\n' "$NIRI_INCLUDE" >> "$NIRI_CONFIG"
+  fi
+
+  if command -v niri >/dev/null 2>&1 && ! niri validate -c "$NIRI_CONFIG"; then
+    echo "Niri config validation failed; restoring the previous config." >&2
+    mv -f "$NIRI_CONFIG_BACKUP" "$NIRI_CONFIG"
+    if [ -f "$NIRI_FRAGMENT_BACKUP" ]; then
+      mv -f "$NIRI_FRAGMENT_BACKUP" "$NIRI_FRAGMENT"
+    else
+      rm -f "$NIRI_FRAGMENT"
+    fi
+    exit 1
+  fi
+
+  rm -f "$NIRI_CONFIG_BACKUP" "$NIRI_FRAGMENT_BACKUP"
+else
+  echo "Niri config not found at $NIRI_CONFIG; skipping compositor rule installation."
+fi
+
+# 8. Install systemd service
 echo "Configuring systemd user service..."
 cat > "$SYSTEMD_DIR/presenced.service" << SVCEOF
 [Unit]
@@ -103,15 +140,13 @@ echo ""
 echo " Run popup:"
 echo "   $APP_NAME"
 echo ""
-echo " Add to ~/.config/niri/config.kdl:"
+echo " Niri integration:"
+echo "   Floating rule: $NIRI_FRAGMENT"
+echo "   The popup opens floating and centered at 720x420."
+echo ""
+echo " Optional hotkey for ~/.config/niri/config.d/70-binds.kdl:"
 echo ""
 echo '   binds {'
 echo "       Mod+P { spawn \"$APP_NAME\"; }"
-echo '   }'
-echo ""
-echo '   window-rule {'
-echo '       match app-id="^io\.niruss\.presenced-popup-niri$"'
-echo '       open-floating true'
-echo '       default-floating-position center'
 echo '   }'
 echo "======================================================"

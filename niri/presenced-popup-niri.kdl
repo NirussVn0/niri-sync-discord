@@ -1,0 +1,19 @@
+// presenced-popup-niri — Niri floating popup rule
+// Installed by scripts/install.sh. Floating windows open centered by default.
+window-rule {
+    match app-id="^presenced-popup-niri$"
+    open-floating true
+    open-focused true
+    default-column-width { fixed 720; }
+    default-window-height { fixed 420; }
+    geometry-corner-radius 18
+    clip-to-geometry true
+    shadow {
+        on
+        softness 30
+        spread 2
+        offset x=0 y=6
+        draw-behind-window true
+        color "#00000080"
+    }
+}

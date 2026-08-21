@@ -1,0 +1,32 @@
+import { readFileSync } from "node:fs";
+import { describe, expect, it } from "vitest";
+
+const rootFile = (path: string) =>
+  readFileSync(new URL(`../../../../${path}`, import.meta.url), "utf8");
+
+describe("Niri popup integration", () => {
+  it("ships a floating rule for the runtime app id and fixed popup size", () => {
+    const rule = rootFile("niri/presenced-popup-niri.kdl");
+
+    expect(rule).toContain('match app-id="^presenced-popup-niri$"');
+    expect(rule).toContain("open-floating true");
+    expect(rule).toContain("open-focused true");
+    expect(rule).toContain("default-column-width { fixed 720; }");
+    expect(rule).toContain("default-window-height { fixed 420; }");
+    expect(rule).not.toContain("default-floating-position center");
+  });
+
+  it("installs and validates the compositor rule automatically", () => {
+    const installer = rootFile("scripts/install.sh");
+    const desktopEntry = rootFile("systemd/io.niruss.presenced-popup-niri.desktop");
+    const tauriConfig = JSON.parse(rootFile("apps/popup/src-tauri/tauri.conf.json"));
+
+    expect(installer).toContain("niri/presenced-popup-niri.kdl");
+    expect(installer).toContain('niri validate -c "$NIRI_CONFIG"');
+    expect(desktopEntry).toContain("Exec=presenced-popup-niri");
+    expect(desktopEntry).toContain("StartupWMClass=presenced-popup-niri");
+    expect(tauriConfig.app.windows[0].center).toBe(true);
+    expect(tauriConfig.app.windows[0].alwaysOnTop).toBe(true);
+    expect(tauriConfig.app.windows[0].skipTaskbar).toBe(true);
+  });
+});

@@ -8,17 +8,17 @@
 
 ### Arch Linux / CachyOS
 ```bash
-sudo pacman -S nodejs npm pnpm base-devel webkit2gtk-4.1 gtk-layer-shell libappindicator-gtk3
+sudo pacman -S nodejs npm pnpm base-devel webkit2gtk-4.1 libappindicator-gtk3
 ```
 
 ### Fedora
 ```bash
-sudo dnf install nodejs pnpm webkit2gtk4.1-devel gtk-layer-shell-devel libappindicator-gtk3-devel
+sudo dnf install nodejs pnpm webkit2gtk4.1-devel libappindicator-gtk3-devel
 ```
 
 ### Ubuntu / Debian (24.04+)
 ```bash
-sudo apt install nodejs npm libwebkit2gtk-4.1-dev libgtk-layer-shell-dev libayatana-appindicator3-dev
+sudo apt install nodejs npm libwebkit2gtk-4.1-dev libayatana-appindicator3-dev
 ```
 
 ---
@@ -75,22 +75,28 @@ journalctl --user -u presenced.service -f
 
 ---
 
-## 5. Niri Wayland Keybinding & Window Rules
+## 5. Niri Wayland Popup Integration
 
-Add a dedicated hotkey to toggle or spawn the companion popup in your `~/.config/niri/config.kdl`:
+The installer writes and validates `~/.config/niri/config.d/85-presenced-popup-niri.kdl` and adds its include to `config.kdl`. This is required because Niri ignores Tauri's client-side `center` request for tiled windows. The installed rule forces the popup into the floating layer at 720×420, where Niri centers it by default.
+
+Add only the optional hotkey to your binds file:
 
 ```kdl
 // Keybinding to toggle the companion popup
 binds {
-    Mod+P { spawn "presenced-popup"; }
+    Mod+P { spawn "presenced-popup-niri"; }
 }
+```
 
-// Window rule to open the popup as a floating companion
+The installed rule is equivalent to:
+
+```kdl
 window-rule {
-    match app-id="^io\\.niruss\\.presenced-popup-niri$"
     match app-id="^presenced-popup-niri$"
     open-floating true
-    default-floating-position center
+    open-focused true
+    default-column-width { fixed 720; }
+    default-window-height { fixed 420; }
 }
 ```
 
