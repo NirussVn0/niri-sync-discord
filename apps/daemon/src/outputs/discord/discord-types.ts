@@ -32,4 +32,4 @@ export const DiscordActivitySchema = z.object({
 });
 export type DiscordActivity = z.infer<typeof DiscordActivitySchema>;
 
-export const DEFAULT_DISCORD_CLIENT_ID = "1214041725514194954";
+export const DEFAULT_DISCORD_CLIENT_ID = "1540340652670324867";
