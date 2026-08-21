@@ -1,9 +1,9 @@
-# Niri Sync Discord — Popup-First V2 Implementation Plan
+# presenced-popup-niri — Popup-First V2 Implementation Plan
 
 **Document Version:** 2.1.0  
 **Date:** 2026-08-20  
 **Status:** Approved Implementation Plan  
-**Target Repository:** `NirussVn0/niri-sync-discord`
+**Target Repository:** `NirussVn0/presenced-popup-niri`
 
 ---
 

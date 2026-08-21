@@ -13,7 +13,7 @@ describe("payload-mapper", () => {
       candidateId: "desktop:code",
       category: "coding",
       title: "Visual Studio Code",
-      details: "niri-sync-discord",
+      details: "presenced-popup-niri",
       source: "niri",
       reason: "Visual Studio Code active",
       resolvedAt: 1000,
@@ -22,7 +22,7 @@ describe("payload-mapper", () => {
     const activity = mapPresenceToDiscordActivity(presence);
     expect(activity).not.toBeNull();
     expect(activity?.details).toBe("Visual Studio Code");
-    expect(activity?.state).toBe("niri-sync-discord");
+    expect(activity?.state).toBe("presenced-popup-niri");
   });
 
   it("maps music presence with title, artist, timestamps, and artwork", () => {

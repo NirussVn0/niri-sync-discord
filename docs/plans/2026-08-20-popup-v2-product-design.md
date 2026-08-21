@@ -1,9 +1,9 @@
-# Niri Sync Discord — Popup-First V2 Product Design & Architectural Specification
+# presenced-popup-niri — Popup-First V2 Product Design & Architectural Specification
 
 **Document Version:** 2.1.0  
 **Date:** 2026-08-20  
 **Author:** Lead Software Engineer & Product Designer  
-**Target Repository:** `NirussVn0/niri-sync-discord`  
+**Target Repository:** `NirussVn0/presenced-popup-niri`
 **Status:** Approved Architecture Plan
 
 ---
@@ -224,8 +224,8 @@ Strict typecheck, passing Vitest suite, native Wayland popup execution, zero reg
 - **Primary Mode**: Wayland native + `wlr-layer-shell` via `gtk-layer-shell` on GTK3 WebKitGTK window handle.
 - **Layer**: `Layer::Top` (sits above normal tiled windows and status bars).
 - **Placement**: Anchored `Top | Right` with `16px` top and right margins on the currently focused Niri output.
-- **Namespace**: `niri-sync-discord`
-- **Application ID**: `io.niruss.niri-sync-discord`
+- **Namespace**: `presenced-popup-niri`
+- **Application ID**: `io.niruss.presenced-popup-niri`
 
 ### 24.2 NiriShellAdapter & Output Sync
 `NiriShellAdapter` monitors Niri's JSON event stream (`niri msg --json event-stream`):
@@ -234,13 +234,13 @@ Strict typecheck, passing Vitest suite, native Wayland popup execution, zero reg
 - Hides popup smoothly during overview without destroying DOM state.
 
 ### 24.3 Focus Protection Semantics
-When the popup receives keyboard interactivity or focus, `PresenceStore` detects that the focused window or layer surface belongs to `niri-sync-discord` / `io.niruss.niri-sync-discord`. Instead of switching presence candidate to `Idle`, the presence engine preserves the last meaningful desktop activity (e.g. `Coding`).
+When the popup receives keyboard interactivity or focus, `PresenceStore` detects that the focused window or layer surface belongs to `presenced-popup-niri` / `io.niruss.presenced-popup-niri`. Instead of switching presence candidate to `Idle`, the presence engine preserves the last meaningful desktop activity (e.g. `Coding`).
 
 ### 24.4 Normal Window Fallback
 If `gtk-layer-shell` is unavailable, `PopupSurfaceAdapter` falls back to an ordinary floating Tauri window with recommended Niri window rule:
 ```kdl
 window-rule {
-    match app-id="io.niruss.niri-sync-discord"
+    match app-id="io.niruss.presenced-popup-niri"
     open-floating true
     default-column-width { fixed 390; }
 }

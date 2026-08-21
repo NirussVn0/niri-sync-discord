@@ -358,7 +358,7 @@ export function usePresenceCompanion(): UsePresenceCompanionReturn {
     }
   };
 
-  const getDiscordConfig = async (): Promise<{ clientId?: string; socketPath?: string }> => {
+  const getDiscordConfig = useCallback(async (): Promise<{ clientId?: string; socketPath?: string }> => {
     try {
       const res = await fetch(`${API_HTTP_URL}/settings/discord`);
       if (!res.ok) return {};
@@ -366,9 +366,9 @@ export function usePresenceCompanion(): UsePresenceCompanionReturn {
     } catch {
       return {};
     }
-  };
+  }, []);
 
-  const saveDiscordConfig = async (config: { clientId?: string; socketPath?: string }) => {
+  const saveDiscordConfig = useCallback(async (config: { clientId?: string; socketPath?: string }) => {
     try {
       await fetch(`${API_HTTP_URL}/settings/discord`, {
         method: "POST",
@@ -378,9 +378,9 @@ export function usePresenceCompanion(): UsePresenceCompanionReturn {
     } catch {
       // ignore
     }
-  };
+  }, []);
 
-  const getRvcConfig = async (): Promise<{ enabled: boolean; tickIntervalSec: number; entries: any[] }> => {
+  const getRvcConfig = useCallback(async (): Promise<{ enabled: boolean; tickIntervalSec: number; entries: any[] }> => {
     try {
       const res = await fetch(`${API_HTTP_URL}/settings/rvc`);
       if (!res.ok) return { enabled: false, tickIntervalSec: 30, entries: [] };
@@ -388,9 +388,9 @@ export function usePresenceCompanion(): UsePresenceCompanionReturn {
     } catch {
       return { enabled: false, tickIntervalSec: 30, entries: [] };
     }
-  };
+  }, []);
 
-  const saveRvcConfig = async (config: { enabled: boolean; tickIntervalSec: number; entries: any[] }) => {
+  const saveRvcConfig = useCallback(async (config: { enabled: boolean; tickIntervalSec: number; entries: any[] }) => {
     try {
       await fetch(`${API_HTTP_URL}/settings/rvc`, {
         method: "POST",
@@ -400,7 +400,7 @@ export function usePresenceCompanion(): UsePresenceCompanionReturn {
     } catch {
       // ignore
     }
-  };
+  }, []);
 
   return {
     snapshot,

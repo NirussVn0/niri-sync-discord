@@ -4,14 +4,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { springSnap } from "../lib/animations.js";
-
-interface ThemeConfig {
-  accentColor: string;
-  glassOpacity: number;
-  blurIntensity: number;
-  borderStyle: "subtle" | "glowing" | "neon";
-  clockStyle: "digital" | "minimal";
-}
+import type { ThemeConfig } from "../hooks/useTheme.js";
 
 interface ThemeSettingsProps {
   onSave: (config: ThemeConfig) => Promise<void>;

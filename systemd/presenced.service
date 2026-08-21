@@ -1,6 +1,6 @@
 [Unit]
 Description=presenced - Linux Desktop Presence Engine for Niri + Discord
-Documentation=https://github.com/NirussVn0/niri-sync-discord
+Documentation=https://github.com/NirussVn0/presenced-popup-niri
 PartOf=graphical-session.target
 After=graphical-session.target
 

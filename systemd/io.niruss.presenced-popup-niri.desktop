@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=presenced-popup-niri
+Comment=Niri Wayland desktop companion with Discord Rich Presence sync
+Exec=presenced-popup-niri
+Icon=io.niruss.presenced-popup-niri
+Terminal=false
+Type=Application
+Categories=Utility;AudioVideo;
+StartupWMClass=io.niruss.presenced-popup-niri
+X-KDE-Wayland-Interfaces=org_kde_plasma_surface

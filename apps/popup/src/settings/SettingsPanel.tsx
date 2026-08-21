@@ -2,7 +2,7 @@
  * SettingsPanel — full settings overlay with tabs.
  * Widgets, RVC, Theme, Quotes, Discord, About.
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PresenceSnapshot, CountdownCategory } from "@presenced/contracts";
 import { WidgetId, WIDGET_REGISTRY } from "../lib/widget-registry.js";
 import { motion } from "framer-motion";
@@ -10,6 +10,7 @@ import { springSnap } from "../lib/animations.js";
 import { RvcSettings } from "./RvcSettings.js";
 import { QuoteSettings } from "./QuoteSettings.js";
 import { ThemeSettings } from "./ThemeSettings.js";
+import type { ThemeConfig } from "../hooks/useTheme.js";
 import { Music, MessageSquare, Timer, CalendarClock, Mic2, Cpu, Wifi, Shield, Palette, FileText, Settings as SettingsIcon, ToggleLeft, ToggleRight } from "lucide-react";
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -31,6 +32,8 @@ interface SettingsPanelProps {
   saveDiscordConfig: (config: { clientId?: string; socketPath?: string }) => Promise<void>;
   getRvcConfig: () => Promise<{ enabled: boolean; tickIntervalSec: number; entries: any[] }>;
   saveRvcConfig: (config: { enabled: boolean; tickIntervalSec: number; entries: any[] }) => Promise<void>;
+  loadTheme: () => Promise<ThemeConfig>;
+  saveTheme: (config: ThemeConfig) => Promise<void>;
 }
 
 const TABS: { id: SettingsTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
@@ -57,17 +60,18 @@ export const SettingsPanel = ({
   visibility, toggleWidget,
   getDiscordConfig, saveDiscordConfig,
   getRvcConfig, saveRvcConfig,
+  loadTheme, saveTheme,
 }: SettingsPanelProps) => {
   const [activeTab, setActiveTab] = useState<SettingsTab>("widgets");
   const [discordClientId, setDiscordClientId] = useState("");
   const [discordSocketPath, setDiscordSocketPath] = useState("");
 
-  useState(() => {
+  useEffect(() => {
     getDiscordConfig().then((c) => {
       setDiscordClientId(c.clientId ?? "");
       setDiscordSocketPath(c.socketPath ?? "");
     });
-  });
+  }, [getDiscordConfig]);
 
   return (
     <div className="space-y-3 text-2xs h-full flex flex-col">
@@ -106,7 +110,7 @@ export const SettingsPanel = ({
         )}
 
         {activeTab === "rvc" && <RvcSettings onSave={saveRvcConfig} onLoad={getRvcConfig} />}
-        {activeTab === "theme" && <ThemeSettings onSave={async () => {}} onLoad={async () => ({ accentColor: "#7c8aff", glassOpacity: 45, blurIntensity: 24, borderStyle: "subtle", clockStyle: "digital" })} />}
+        {activeTab === "theme" && <ThemeSettings onSave={saveTheme} onLoad={loadTheme} />}
         {activeTab === "quotes" && <QuoteSettings onSave={async () => {}} onLoad={async () => []} />}
 
         {activeTab === "discord" && (

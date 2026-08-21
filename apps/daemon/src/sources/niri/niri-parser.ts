@@ -123,8 +123,8 @@ export class NiriParser {
 
     // Protect presence context when popup window/layer surface receives focus
     if (
-      appId === "io.niruss.niri-sync-discord" ||
-      appId === "niri-sync-discord" ||
+      appId === "io.niruss.presenced-popup-niri" ||
+      appId === "presenced-popup-niri" ||
       appId === "presenced-popup"
     ) {
       return { changed: false, fact: this.lastEmittedFact };

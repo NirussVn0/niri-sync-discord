@@ -37,7 +37,7 @@ The system is running natively under Wayland with Niri managing active outputs a
 - **Crate / Library**: `gtk-layer-shell` (`libgtk-layer-shell.so.0`) is installed on the system and natively supported by Niri.
 - **Initialization**:
   1. Call `gtk_layer_shell::init_for_window(&gtk_window)` before mapping or during window setup.
-  2. Set namespace: `gtk_layer_shell::set_namespace(&gtk_window, "niri-sync-discord")`.
+  2. Set namespace: `gtk_layer_shell::set_namespace(&gtk_window, "presenced-popup-niri")`.
   3. Configure Layer: `gtk_layer_shell::set_layer(&gtk_window, Layer::Top)`.
   4. Configure Anchors & Margins:
      - Anchor Top: `gtk_layer_shell::set_anchor(&gtk_window, Edge::Top, true)`
@@ -53,16 +53,16 @@ The system is running natively under Wayland with Niri managing active outputs a
 
 ### 2.4 Focus Semantics & Context Protection
 - When the layer-shell popup requests keyboard focus (`KeyboardInteractivity::OnDemand`), Niri emits `WindowFocusChanged { id: null }` for tiled windows.
-- **Context Protection Rule**: `PresenceStore` and `SceneResolver` must treat the popup's own application ID (`io.niruss.niri-sync-discord` / layer surface `niri-sync-discord`) as transparent overlay focus, preserving the last non-empty desktop activity (e.g. `Coding` remains `Coding` rather than degrading to `Idle`).
+- **Context Protection Rule**: `PresenceStore` and `SceneResolver` must treat the popup's own application ID (`io.niruss.presenced-popup-niri` / layer surface `presenced-popup-niri`) as transparent overlay focus, preserving the last non-empty desktop activity (e.g. `Coding` remains `Coding` rather than degrading to `Idle`).
 
 ### 2.5 Normal Window Fallback
 If `gtk-layer-shell` is unavailable or fails initialization (e.g. when run under an unsupported compositor or pure X11), `PopupSurfaceAdapter` falls back to an ordinary floating Tauri window with:
-- `app_id: "io.niruss.niri-sync-discord"`
+- `app_id: "io.niruss.presenced-popup-niri"`
 - Dimensions: `width: 390px`, `height: 600px`
 - Niri Recommended Rule:
   ```kdl
   window-rule {
-      match app-id="io.niruss.niri-sync-discord"
+      match app-id="io.niruss.presenced-popup-niri"
       open-floating true
       default-column-width { fixed 390; }
   }

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { usePresenceCompanion } from "./hooks/usePresenceCompanion.js";
 import { useWidgetConfig } from "./hooks/useWidgetConfig.js";
+import { useTheme } from "./hooks/useTheme.js";
 import { PremiumClock } from "./widgets/PremiumClock.js";
 import { MusicWidget } from "./widgets/MusicWidget.js";
 import { RvcWidget } from "./widgets/RvcWidget.js";
@@ -28,7 +29,8 @@ export function App() {
     getDiscordConfig, saveDiscordConfig, getRvcConfig, saveRvcConfig,
   } = usePresenceCompanion();
 
-  const { visibility, isExpanded, editMode, toggleSettings, collapseSettings, toggleEditMode } = useWidgetConfig();
+  const { visibility, isExpanded, editMode, toggleWidget, toggleSettings, collapseSettings, toggleEditMode } = useWidgetConfig();
+  const { theme, loadTheme, saveTheme } = useTheme();
 
   const [leftOpen, setLeftOpen] = useState(false);
   const [rightOpen, setRightOpen] = useState(false);
@@ -65,7 +67,7 @@ export function App() {
         <div className="flex-1 min-w-0 flex flex-col gap-2">
           {/* Header: Clock + Controls */}
           <motion.div className="glass-strong rounded-niri-xl p-3 flex items-center justify-between" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={springNiri}>
-            <PremiumClock userName="Niruss" wsConnected={wsConnected} />
+            <PremiumClock userName="Niruss" wsConnected={wsConnected} clockStyle={theme.clockStyle} />
             <div className="flex items-center gap-1">
               <motion.button type="button" onClick={toggleEditMode} className={`p-1.5 rounded-niri transition-colors ${editMode ? "bg-accent-primary/20 text-accent-primary" : "glass-surface text-text-secondary hover:text-text-primary"}`} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} transition={springSnap} title="Edit widgets">
                 <Pencil className="w-3.5 h-3.5" />
@@ -82,7 +84,7 @@ export function App() {
             <AnimatePresence mode="wait">
               {isExpanded ? (
                 <motion.div key="settings" className="h-full glass-strong rounded-niri-xl p-3 overflow-y-auto scrollbar-thin" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={springNiri}>
-                  <SettingsPanel visibility={visibility} toggleWidget={() => {}} onClose={collapseSettings} snapshot={snapshot} onSetPrivacyMode={setPrivacyMode} onAddCountdown={addCountdown} onDeleteCountdown={deleteCountdown} onToggleCountdown={toggleCountdown} getDiscordConfig={getDiscordConfig} saveDiscordConfig={saveDiscordConfig} getRvcConfig={getRvcConfig} saveRvcConfig={saveRvcConfig} />
+                  <SettingsPanel visibility={visibility} toggleWidget={toggleWidget} onClose={collapseSettings} snapshot={snapshot} onSetPrivacyMode={setPrivacyMode} onAddCountdown={addCountdown} onDeleteCountdown={deleteCountdown} onToggleCountdown={toggleCountdown} getDiscordConfig={getDiscordConfig} saveDiscordConfig={saveDiscordConfig} getRvcConfig={getRvcConfig} saveRvcConfig={saveRvcConfig} loadTheme={loadTheme} saveTheme={saveTheme} />
                 </motion.div>
               ) : (
                 <motion.div key="main" className="h-full grid gap-2" style={{ gridTemplateColumns: "1fr 1fr", gridTemplateRows: "auto auto" }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={springNiri}>

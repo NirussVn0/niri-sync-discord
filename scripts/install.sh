@@ -15,7 +15,7 @@ DAEMON_DIR="$HOME/.local/share/presenced/daemon"
 
 APP_NAME="presenced-popup-niri"
 APP_ID="io.niruss.presenced-popup-niri"
-OLD_APP_ID="io.niruss.niri-sync-discord"
+
 
 # 1. Create directories
 mkdir -p "$BIN_DIR" "$APP_DIR" "$ICON_DIR" "$SYSTEMD_DIR" "$DAEMON_DIR"
@@ -48,14 +48,13 @@ chmod +x "$BIN_DIR/presenced"
 
 # 6. Install desktop entry
 echo "Installing desktop entry..."
-sed "s|io\.niruss\.niri-sync-discord|$APP_ID|g; s|Niri Sync Discord|presenced-popup Niri Discord Sync|g" \
-  "$REPO_DIR/systemd/io.niruss.niri-sync-discord.desktop" > "$APP_DIR/$APP_ID.desktop"
+cp -f "$REPO_DIR/systemd/io.niruss.presenced-popup-niri.desktop" "$APP_DIR/$APP_ID.desktop"
 
 if [ -f "$REPO_DIR/apps/popup/src-tauri/icons/icon.png" ]; then
   cp -f "$REPO_DIR/apps/popup/src-tauri/icons/icon.png" "$ICON_DIR/$APP_ID.png"
 fi
 
-rm -f "$APP_DIR/$OLD_APP_ID.desktop" "$ICON_DIR/$OLD_APP_ID.png"
+
 
 if command -v update-desktop-database >/dev/null 2>&1; then
   update-desktop-database "$APP_DIR" || true
@@ -66,7 +65,7 @@ echo "Configuring systemd user service..."
 cat > "$SYSTEMD_DIR/presenced.service" << SVCEOF
 [Unit]
 Description=presenced - Niri Wayland Discord Sync Companion
-Documentation=https://github.com/NirussVn0/niri-sync-discord
+Documentation=https://github.com/NirussVn0/presenced-popup-niri
 PartOf=graphical-session.target
 After=graphical-session.target
 

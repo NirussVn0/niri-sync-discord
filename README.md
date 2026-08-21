@@ -124,8 +124,8 @@ sudo npm install -g pnpm
 
 ```bash
 # Clone the repository
-git clone https://github.com/NirussVn0/niri-sync-discord.git
-cd niri-sync-discord
+git clone https://github.com/NirussVn0/presenced-popup-niri.git
+cd presenced-popup-niri
 
 # Install all workspace dependencies
 pnpm install
@@ -200,11 +200,11 @@ binds {
 
 // Window rules for the companion popup
 window-rule {
-    match app-id="^io\\.niruss\\.niri-sync-discord$"
-    match app-id="^niri-sync-discord$"
+    match app-id="^io\\.niruss\\.presenced-popup-niri$"
+    match app-id="^presenced-popup-niri$"
     match title="^presenced$"
     open-floating true
-    default-floating-position top-right
+    default-floating-position center
     shadow {
         on
         softness 30
@@ -250,7 +250,7 @@ pnpm lint
 ## 📁 Monorepo Workspace Structure
 
 ```text
-niri-sync-discord/
+presenced-popup-niri/
 ├── apps/
 │   ├── daemon/          # Headless backend (Niri, MPRIS, LRCLIB, SQLite, Discord RPC, Hono)
 │   ├── popup/           # Desktop companion (Tauri v2, React 19, Tailwind CSS)

@@ -35,7 +35,7 @@ export class LrclibClient {
   } = {}) {
     this.baseUrl = options.baseUrl ?? "https://lrclib.net/api";
     this.userAgent =
-      options.userAgent ?? "presenced/0.1.0 (https://github.com/NirussVn0/niri-sync-discord)";
+      options.userAgent ?? "presenced-popup-niri/0.6.0 (https://github.com/NirussVn0/presenced-popup-niri)";
     this.database = options.database ?? null;
     this.defaultTtlMs = options.defaultTtlMs ?? 24 * 60 * 60 * 1000; // 24 hours
   }

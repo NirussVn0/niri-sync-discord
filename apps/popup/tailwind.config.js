@@ -25,9 +25,9 @@ export default {
         },
         // Scene-specific accent glows
         accent: {
-          primary: "#7c8aff",     // Indigo-blue (primary interface)
-          glow: "#5b6aff",        // Brighter glow for active elements
-          muted: "rgba(124, 138, 255, 0.15)",
+          primary: "rgb(var(--accent-rgb) / <alpha-value>)",
+          glow: "rgb(var(--accent-rgb) / 0.86)",
+          muted: "rgb(var(--accent-rgb) / 0.15)",
         },
         // Scene ambient colors
         scene: {
@@ -59,8 +59,8 @@ export default {
         border: {
           DEFAULT: "rgba(40, 50, 80, 0.30)",
           subtle: "rgba(40, 50, 80, 0.15)",
-          accent: "rgba(124, 138, 255, 0.30)",
-          glow: "rgba(124, 138, 255, 0.50)",
+          accent: "rgb(var(--accent-rgb) / 0.30)",
+          glow: "rgb(var(--accent-rgb) / 0.50)",
         },
       },
 
@@ -99,9 +99,9 @@ export default {
 
       // ── Box shadow — glow system ───────────────────────────────────────
       boxShadow: {
-        "glow-sm": "0 0 12px -2px rgba(124, 138, 255, 0.25)",
-        "glow": "0 0 24px -4px rgba(124, 138, 255, 0.30)",
-        "glow-lg": "0 0 40px -6px rgba(124, 138, 255, 0.35)",
+        "glow-sm": "0 0 12px -2px rgb(var(--accent-rgb) / 0.25)",
+        "glow": "0 0 24px -4px rgb(var(--accent-rgb) / 0.30)",
+        "glow-lg": "0 0 40px -6px rgb(var(--accent-rgb) / 0.35)",
         "glow-scene": "0 0 30px -5px var(--scene-glow, rgba(124, 138, 255, 0.25))",
         "glass": "0 8px 32px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.05)",
         "glass-lg": "0 16px 48px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06)",

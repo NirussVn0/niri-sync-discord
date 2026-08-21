@@ -9,9 +9,10 @@ import { springNiri } from "../lib/animations.js";
 interface PremiumClockProps {
   userName?: string;
   wsConnected?: boolean;
+  clockStyle?: "digital" | "minimal";
 }
 
-export const PremiumClock = ({ userName = "Niruss", wsConnected }: PremiumClockProps) => {
+export const PremiumClock = ({ userName = "Niruss", wsConnected, clockStyle = "digital" }: PremiumClockProps) => {
   const [time, setTime] = useState(new Date());
 
   useEffect(() => {
@@ -51,10 +52,11 @@ export const PremiumClock = ({ userName = "Niruss", wsConnected }: PremiumClockP
         }}
       />
 
-      {/* Greeting */}
-      <div className="text-2xs text-text-secondary mb-1 relative">
-        {getGreeting()}, <span className="text-text-primary font-semibold">{userName}</span>
-      </div>
+      {clockStyle === "digital" && (
+        <div className="text-2xs text-text-secondary mb-1 relative">
+          {getGreeting()}, <span className="text-text-primary font-semibold">{userName}</span>
+        </div>
+      )}
 
       {/* Clock */}
       <div className="flex items-baseline justify-center gap-0.5 relative">
@@ -71,7 +73,7 @@ export const PremiumClock = ({ userName = "Niruss", wsConnected }: PremiumClockP
         <span className="text-4xl font-black font-mono text-text-primary tracking-tighter">
           {minutes}
         </span>
-        <span className="text-lg font-mono text-text-muted ml-1">{seconds}</span>
+        {clockStyle === "digital" && <span className="text-lg font-mono text-text-muted ml-1">{seconds}</span>}
       </div>
 
       {/* Date + Connection */}

@@ -21,7 +21,7 @@ describe("NiriParser", () => {
           },
           {
             id: 2,
-            title: "main.ts - niri-sync-discord",
+            title: "main.ts - presenced-popup-niri",
             app_id: "code",
             workspace_id: 1,
             is_focused: true,
@@ -35,7 +35,7 @@ describe("NiriParser", () => {
     expect(res.fact).not.toBeNull();
     expect(res.fact?.appId).toBe("code");
     expect(res.fact?.windowId).toBe(2);
-    expect(res.fact?.rawTitle).toBe("main.ts - niri-sync-discord");
+    expect(res.fact?.rawTitle).toBe("main.ts - presenced-popup-niri");
   });
 
   it("emits new fact when WindowFocusChanged occurs", () => {

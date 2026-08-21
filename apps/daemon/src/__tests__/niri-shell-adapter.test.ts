@@ -22,7 +22,7 @@ describe("NiriShellAdapter & Focus Protection", () => {
       WindowOpenedOrChanged: {
         window: {
           id: 10,
-          title: "niri-sync-discord — Visual Studio Code",
+          title: "presenced-popup-niri — Visual Studio Code",
           app_id: "code",
           workspace_id: 1,
           is_focused: true,
@@ -33,13 +33,13 @@ describe("NiriShellAdapter & Focus Protection", () => {
     expect(res1.changed).toBe(true);
     expect(res1.fact?.appId).toBe("code");
 
-    // 2. User summons popup (focus changes to io.niruss.niri-sync-discord)
+    // 2. User summons popup (focus changes to io.niruss.presenced-popup-niri)
     const openPopup = {
       WindowOpenedOrChanged: {
         window: {
           id: 99,
           title: "presenced",
-          app_id: "io.niruss.niri-sync-discord",
+          app_id: "io.niruss.presenced-popup-niri",
           workspace_id: 1,
           is_focused: true,
         },

@@ -9,6 +9,14 @@
 :root {
   color-scheme: dark;
 
+  --accent-color: #7c8aff;
+  --accent-rgb: 124 138 255;
+  --glass-alpha: 0.45;
+  --glass-alpha-strong: 0.55;
+  --glass-alpha-float: 0.35;
+  --glass-blur: 24px;
+  --glass-blur-strong: 32px;
+
   /* ── Niri palette sync ────────────────────────────────────────────────── */
   --niri-focus: #808080;
   --niri-dim: #505050;
@@ -38,7 +46,7 @@ body {
 
 /* ── Accessible focus ring (Niri-inspired) ─────────────────────────────── */
 :focus-visible {
-  outline: 2px solid var(--niri-focus);
+  outline: 2px solid var(--accent-color);
   outline-offset: 2px;
   border-radius: var(--niri-radius);
 }
@@ -56,32 +64,46 @@ body {
 /* ── Glassmorphism utilities ────────────────────────────────────────────── */
 @layer utilities {
   .glass {
-    background: rgba(16, 20, 32, 0.45);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    background: rgba(16, 20, 32, var(--glass-alpha));
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
     border: 1px solid rgba(255, 255, 255, 0.08);
   }
 
   .glass-strong {
-    background: rgba(12, 15, 24, 0.55);
-    backdrop-filter: blur(32px);
-    -webkit-backdrop-filter: blur(32px);
+    background: rgba(12, 15, 24, var(--glass-alpha-strong));
+    backdrop-filter: blur(var(--glass-blur-strong));
+    -webkit-backdrop-filter: blur(var(--glass-blur-strong));
     border: 1px solid rgba(255, 255, 255, 0.10);
   }
 
   .glass-float {
-    background: rgba(20, 25, 40, 0.35);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
+    background: rgba(20, 25, 40, var(--glass-alpha-float));
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
     border: 1px solid rgba(255, 255, 255, 0.07);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.06);
   }
 
   .glass-surface {
-    background: rgba(16, 20, 32, 0.30);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    background: rgba(16, 20, 32, calc(var(--glass-alpha) * 0.67));
+    backdrop-filter: blur(calc(var(--glass-blur) * 0.67));
+    -webkit-backdrop-filter: blur(calc(var(--glass-blur) * 0.67));
     border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  :root[data-theme-border="glowing"] .glass,
+  :root[data-theme-border="glowing"] .glass-strong,
+  :root[data-theme-border="glowing"] .glass-float {
+    border-color: rgb(var(--accent-rgb) / 0.34);
+    box-shadow: 0 0 22px -5px rgb(var(--accent-rgb) / 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  }
+
+  :root[data-theme-border="neon"] .glass,
+  :root[data-theme-border="neon"] .glass-strong,
+  :root[data-theme-border="neon"] .glass-float {
+    border-color: rgb(var(--accent-rgb) / 0.62);
+    box-shadow: 0 0 6px rgb(var(--accent-rgb) / 0.45), 0 0 26px rgb(var(--accent-rgb) / 0.22);
   }
 
   /* ── Ambient glow per scene ─────────────────────────────────────────── */
